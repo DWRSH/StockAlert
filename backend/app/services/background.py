@@ -6,16 +6,22 @@ from app.models.alert import Alert
 from app.services.finance import get_live_price
 from app.utils.email import send_email_notification
 
+# Logger Setup (Verbose Mode)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("StockWatcher")
 
 async def track_stock_prices():
     try:
         # 1. Active alerts dhoondo
         active_alerts = await Alert.find(Alert.status == "active").to_list()
+        
         if not active_alerts:
+            # Logs bhare nahi, isliye return silently agar alerts nahi hain
             return
 
-        # 2. Optimization: Duplicate symbols ko group karo taaki baar-baar fetch na karna pade
+        logger.info(f"📋 Checking {len(active_alerts)} active alerts...")
+
+        # 2. Optimization: Duplicate symbols ko group karo
         symbol_map = {}
         for alert in active_alerts:
             sym = alert.stock_symbol
@@ -27,30 +33,44 @@ async def track_stock_prices():
         # 3. Har unique symbol ka price check karo
         for symbol in unique_symbols:
             try:
-                current_price = get_live_price(symbol)
-                if current_price is None: continue
+                # ✅ FIX: 'await' lagana zaroori hai kyunki get_live_price async hai
+                current_price = await get_live_price(symbol)
                 
-                # 4. Check karo ki target hit hua ya nahi
+                # Debug Log: Price kya aaya?
+                if current_price is None:
+                    logger.warning(f"⚠️ Could not fetch price for {symbol}. Skipping...")
+                    continue
+                
+                logger.info(f"🔎 {symbol} Live Price: ₹{current_price}")
+
+                # 4. Target Check karo
                 for alert in symbol_map[symbol]:
-                    # Agar current price target se zyada ya barabar hai
-                    if current_price >= alert.target_price:
-                        print(f"🎯 ALERT TRIGGERED: {symbol} at {current_price}")
+                    target = float(alert.target_price) # Float conversion safety
+                    
+                    # Logic Check
+                    # logger.info(f"   👉 Checking Alert: Target ₹{target} vs Current ₹{current_price}")
+
+                    if current_price >= target:
+                        logger.info(f"   🎯 TARGET HIT! {symbol} (₹{current_price}) >= Target (₹{target})")
+                        logger.info(f"   🚀 Sending email to {alert.email}...")
                         
                         # Email Bhejo
                         email_sent = await send_email_notification(
                             to_email=alert.email, 
                             symbol=alert.stock_symbol, 
                             current_price=current_price,
-                            target_price=alert.target_price
+                            target_price=target
                         )
                         
-                        # Agar email chala gaya, to alert ko "triggered" mark karo
                         if email_sent:
+                            logger.info("   ✅ Email Sent Successfully!")
                             alert.status = "triggered"
                             await alert.save()
+                        else:
+                            logger.error("   ❌ Email Sending Failed (Check SMTP Config).")
                 
-                # API Rate limit se bachne ke liye thoda sleep
-                await asyncio.sleep(1) 
+                # Rate limit safety
+                await asyncio.sleep(0.5) 
             except Exception as e:
                 logger.error(f"Error checking {symbol}: {e}")
                 
