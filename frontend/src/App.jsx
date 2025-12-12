@@ -1,54 +1,67 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast, { Toaster } from 'react-hot-toast'
 
-// Components Imports
+// --- Components ---
 import AuthPage from './AuthPage'
-import Sidebar from './components/layout/Sidebar' // ✅ Imported
-import MobileMenu from './components/layout/MobileMenu' // ✅ Imported
+import Sidebar from './components/layout/Sidebar'
+import MobileMenu from './components/layout/MobileMenu'
 import AlertForm from './components/dashboard/AlertForm'
 import AlertList from './components/dashboard/AlertList'
-import ChartModal from './components/modals/ChartModal'
 import NewsFeed from './components/news/NewsFeed'
+
+// --- Modals ---
+import ChartModal from './components/modals/ChartModal'
 import ProfileModal from './components/modals/ProfileModal'
 import AiModal from './components/modals/AiModal'
-import { API_URL, getThemeStyles } from './utils/helpers' // ✅ Ensure helpers path is correct
+
+// --- AI Chat Feature ---
+import ChatAssistant from './components/chat/ChatAssistant' // ✅ Imported
+
+// --- Utils & Icons ---
+import { API_URL, getThemeStyles } from './utils/helpers'
 import { MenuIcon } from './components/common/Icons'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'))
+  
+  // Dashboard States
   const [form, setForm] = useState({ symbol: '', target: '' })
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [chartData, setChartData] = useState([])
-  const [selectedStock, setSelectedStock] = useState(null)
-  
-  // States
-  const [activeView, setActiveView] = useState('dashboard') 
-  const [generalNews, setGeneralNews] = useState([])
-  const [isNewsLoading, setIsNewsLoading] = useState(false)
-
-  const [isChartLoading, setIsChartLoading] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [indices, setIndices] = useState({ nifty: 0, sensex: 0 })
   const [isInitialLoading, setIsInitialLoading] = useState(true)
-    
+  
+  // UI States
+  const [activeView, setActiveView] = useState('dashboard') 
+  const [generalNews, setGeneralNews] = useState([])
+  const [isNewsLoading, setIsNewsLoading] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // Modal States
+  const [chartData, setChartData] = useState([])
+  const [isChartLoading, setIsChartLoading] = useState(false)
+  const [selectedStock, setSelectedStock] = useState(null)
   const [userEmail, setUserEmail] = useState('')
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  
+  // AI Analysis States
   const [aiAnalysisResult, setAiAnalysisResult] = useState(null)
   const [analyzedStockName, setAnalyzedStockName] = useState(null)
   const [isAiLoading, setIsAiLoading] = useState(false)
     
+  // Theme State
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('stockTheme');
     return savedTheme === 'light' ? false : true;
   });
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const theme = getThemeStyles(isDarkMode);
 
+  // --- Effects ---
   const logout = () => { localStorage.removeItem('token'); setToken(null); toast.success('See you soon!') }
   
   const toggleTheme = () => setIsDarkMode(!isDarkMode)
@@ -99,7 +112,6 @@ function App() {
       }
   }, [activeView])
   
-  // Search Logic
   useEffect(() => {
     const delay = setTimeout(async () => {
       if (form.symbol.length > 1) {
@@ -116,6 +128,7 @@ function App() {
     return () => clearTimeout(delay)
   }, [form.symbol])
 
+  // --- Handlers ---
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -172,14 +185,13 @@ function App() {
     return userEmail ? userEmail.charAt(0).toUpperCase() : 'U';
   }
 
-  // --- RENDERING ---
+  // --- Main Render ---
   if (!token) return <AuthPage onLogin={() => setToken(localStorage.getItem('token'))} />
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}>
       <Toaster position="bottom-right" toastOptions={{ style: { background: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#333', border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0' } }} />
 
-      {/* ✅ MOBILE MENU OVERLAY - Properly Connected */}
       <MobileMenu 
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
@@ -197,7 +209,6 @@ function App() {
 
       <div className="flex h-screen overflow-hidden">
         
-        {/* ✅ DESKTOP SIDEBAR - Properly Connected */}
         <Sidebar 
           theme={theme}
           isDarkMode={isDarkMode}
@@ -212,10 +223,8 @@ function App() {
           getAvatarLetter={getAvatarLetter}
         />
 
-        {/* MAIN CONTENT AREA */}
         <main className={`flex-1 overflow-y-auto relative transition-colors duration-300 ${theme.bg}`}>
             
-            {/* ✅ MOBILE HEADER - With Hamburger Button */}
             <div className={`md:hidden sticky top-0 z-20 border-b px-4 py-4 flex justify-between items-center backdrop-blur-md ${isDarkMode ? 'bg-[#0B0F19]/90 border-slate-800' : 'bg-white/90 border-slate-200'}`}>
                 <span className={`text-lg font-bold ${theme.heading}`}>StockWatcher</span>
                 <button onClick={() => setIsMobileMenuOpen(true)} className="p-1">
@@ -226,20 +235,18 @@ function App() {
             <div className="max-w-5xl mx-auto p-4 md:p-8 lg:p-10 pb-24">
                 {activeView === 'dashboard' ? (
                     <>
-                        {/* Stats Logic (Optional: Make separate component if needed) */}
                          <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
-                            <div className={`p-3 md:p-5 bg-gradient-to-br border rounded-2xl flex flex-col justify-center items-center md:items-start text-center md:text-left ${isDarkMode ? 'from-slate-800 to-slate-900 border-slate-700 text-white' : 'from-white to-slate-50 border-slate-200 text-slate-900'}`}>
-                                <p className="text-[10px] md:text-xs font-bold opacity-50 uppercase tracking-wider">Total</p>
-                                <p className="text-xl md:text-3xl font-black mt-1">{alerts.length}</p>
-                            </div>
-                            <div className={`p-3 md:p-5 bg-gradient-to-br border rounded-2xl flex flex-col justify-center items-center md:items-start text-center md:text-left ${isDarkMode ? 'from-indigo-900/20 to-slate-900 border-indigo-500/20 text-indigo-500' : 'from-indigo-50 to-white border-indigo-100 text-indigo-500'}`}>
-                                <p className="text-[10px] md:text-xs font-bold opacity-50 uppercase tracking-wider">Active</p>
-                                <p className="text-xl md:text-3xl font-black mt-1">{alerts.filter(a => a.status !== 'triggered').length}</p>
-                            </div>
-                            <div className={`p-3 md:p-5 bg-gradient-to-br border rounded-2xl flex flex-col justify-center items-center md:items-start text-center md:text-left ${isDarkMode ? 'from-red-900/20 to-slate-900 border-red-500/20 text-red-500' : 'from-red-50 to-white border-red-100 text-red-500'}`}>
-                                <p className="text-[10px] md:text-xs font-bold opacity-50 uppercase tracking-wider">Hit</p>
-                                <p className="text-xl md:text-3xl font-black mt-1">{alerts.filter(a => a.status === 'triggered').length}</p>
-                            </div>
+                            {/* Stats Cards manually rendered here for simplicity, can be component */}
+                            {[
+                                {label: 'Total', val: alerts.length, color: isDarkMode ? 'text-white' : 'text-slate-900', bg: isDarkMode ? 'from-slate-800 to-slate-900 border-slate-700' : 'from-white to-slate-50 border-slate-200'},
+                                {label: 'Active', val: alerts.filter(a => a.status !== 'triggered').length, color: 'text-indigo-500', bg: isDarkMode ? 'from-indigo-900/20 to-slate-900 border-indigo-500/20' : 'from-indigo-50 to-white border-indigo-100'},
+                                {label: 'Hit', val: alerts.filter(a => a.status === 'triggered').length, color: 'text-red-500', bg: isDarkMode ? 'from-red-900/20 to-slate-900 border-red-500/20' : 'from-red-50 to-white border-red-100'}
+                            ].map((s, i) => (
+                                <div key={i} className={`p-3 md:p-5 bg-gradient-to-br border rounded-2xl flex flex-col justify-center items-center md:items-start text-center md:text-left ${s.bg}`}>
+                                    <p className="text-[10px] md:text-xs font-bold opacity-50 uppercase tracking-wider">{s.label}</p>
+                                    <p className={`text-xl md:text-3xl font-black mt-1 ${s.color}`}>{s.val}</p>
+                                </div>
+                            ))}
                         </div>
 
                         <div className="mb-10 relative z-20">
@@ -258,7 +265,6 @@ function App() {
                         />
                     </>
                 ) : (
-                    // ✅ News Component Connected
                     <NewsFeed 
                         generalNews={generalNews}
                         isNewsLoading={isNewsLoading}
@@ -271,7 +277,7 @@ function App() {
         </main>
       </div>
       
-      {/* ✅ Modals Connected */}
+      {/* --- Modals & Overlays --- */}
       <ChartModal 
         selectedStock={selectedStock} setSelectedStock={setSelectedStock}
         chartData={chartData} isChartLoading={isChartLoading}
@@ -289,6 +295,10 @@ function App() {
         aiAnalysisResult={aiAnalysisResult} isAiLoading={isAiLoading}
         theme={theme} isDarkMode={isDarkMode}
       />
+
+      {/* ✅ AI CHAT ASSISTANT (Floating) */}
+      <ChatAssistant theme={theme} isDarkMode={isDarkMode} />
+
     </div>
   )
 }
