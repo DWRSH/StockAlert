@@ -4,42 +4,60 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CloseIcon } from '../common/Icons'; 
 import { API_URL } from '../../utils/helpers';
 
-// --- NEW ICONS ---
-
+// --- ICONS ---
 const SendIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
 
-// ✨ NEW: HIGH VISIBILITY BOLD BOT ICON
-// Iski lines thick hain (strokeWidth="2.5") taaki clear dikhe
+const SmartBotIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <rect x="4" y="4" width="16" height="12" rx="4" stroke="currentColor" strokeWidth="2"/>
+    <path d="M8 10H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M14 10H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M9 14C9 14 10.5 15 12 15C13.5 15 15 14 15 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="12" cy="3" r="1" fill="currentColor"/>
+    <path d="M2 10L4 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M20 10L22 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
 const BoldBotIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Antenna */}
     <path d="M12 2V5" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
     <circle cx="12" cy="2" r="1.5" fill="currentColor"/>
-    
-    {/* Face Shape */}
     <rect x="3" y="5" width="18" height="16" rx="4" stroke="currentColor" strokeWidth="2.5" fill="none"/>
-    
-    {/* Eyes (Bold Dots) */}
     <circle cx="8.5" cy="11.5" r="1.5" fill="currentColor"/>
     <circle cx="15.5" cy="11.5" r="1.5" fill="currentColor"/>
-    
-    {/* Smile/Mouth */}
     <path d="M9 16C9 16 10 17 12 17C14 17 15 16 15 16" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
   </svg>
 );
 
 export default function ChatAssistant({ theme, isDarkMode }) {
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState([
-        { role: 'bot', text: 'Hello! 👋 I am StockBot. Ask me anything about the market!' }
-    ]);
+    
+    // Initial Message
+    const initialMessage = { role: 'bot', text: 'Hello! 👋 I am StockBot. Ask me anything about the market!' };
+    
+    const [messages, setMessages] = useState([initialMessage]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef(null);
 
+    // Auto-scroll to bottom
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isOpen]);
+
+    // ✅ NEW LOGIC: RESET CHAT ON CLOSE
+    useEffect(() => {
+        if (!isOpen) {
+            // Thoda wait karo taaki closing animation pura ho jaye, fir chat clear karo
+            const timer = setTimeout(() => {
+                setMessages([initialMessage]); // Reset to hello message
+                setInput('');
+            }, 500); // 500ms delay
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -62,7 +80,6 @@ export default function ChatAssistant({ theme, isDarkMode }) {
     return (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
             
-            {/* CHAT WINDOW */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div 
@@ -84,7 +101,10 @@ export default function ChatAssistant({ theme, isDarkMode }) {
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsOpen(false)} className="opacity-70 hover:opacity-100 transition"><CloseIcon /></button>
+                            {/*Close Button */}
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setIsOpen(false)} className="opacity-70 hover:opacity-100 transition"><CloseIcon /></button>
+                            </div>
                         </div>
 
                         {/* Messages Area */}
@@ -133,14 +153,13 @@ export default function ChatAssistant({ theme, isDarkMode }) {
                 )}
             </AnimatePresence>
 
-            {/* FLOATING BUTTON with BOLD ICON */}
+            {/* FLOATING BUTTON */}
             <motion.button 
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-600/40 border-4 border-white/20 backdrop-blur-md ring-2 ring-indigo-400 animate-pulse"
             >
-                {/* Button size badha diya (w-16 h-16) taaki aur clear dikhe */}
                 {isOpen ? <CloseIcon /> : <BoldBotIcon className="w-8 h-8" />}
             </motion.button>
         </div>
