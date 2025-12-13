@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from '../../utils/helpers';
 import toast from 'react-hot-toast';
+
+// --- Icons ---
+const WalletIcon = () => <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
+const PlusIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
+const TrendUp = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>;
 
 export default function Portfolio({ token, isDarkMode }) {
     const [holdings, setHoldings] = useState([]);
@@ -38,7 +43,7 @@ export default function Portfolio({ token, isDarkMode }) {
                 price: Number(txn.price)
             }, { headers: { Authorization: `Bearer ${token}` } });
             
-            toast.success("Success!", { id: tId });
+            toast.success("Transaction Saved!", { id: tId });
             setShowForm(false);
             setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' });
             fetchPortfolio();
@@ -49,101 +54,171 @@ export default function Portfolio({ token, isDarkMode }) {
 
     // Calculations
     const totalInvested = holdings.reduce((acc, curr) => acc + (curr.quantity * curr.avg_price), 0);
-    // Note: Live Value ke liye humein current price chahiye hoga (abhi hum dummy +5% profit dikha rahe hain logic samjhne ke liye)
+    // Dummy Logic for Current Value (+5% gain simulation)
     const currentValue = totalInvested * 1.05; 
     const totalPnL = currentValue - totalInvested;
+    const pnlPercentage = totalInvested > 0 ? ((totalPnL / totalInvested) * 100).toFixed(2) : 0;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             
-            {/* 1. Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SummaryCard label="Total Invested" value={`₹${totalInvested.toLocaleString()}`} color="text-indigo-500" isDarkMode={isDarkMode} />
-                <SummaryCard label="Current Value" value={`₹${currentValue.toLocaleString()}`} color="text-emerald-500" isDarkMode={isDarkMode} />
-                <SummaryCard label="Total P/L" value={`${totalPnL >= 0 ? '+' : ''}₹${totalPnL.toLocaleString()}`} color={totalPnL >= 0 ? "text-emerald-500" : "text-red-500"} isDarkMode={isDarkMode} />
-            </div>
+            {/* 1. HERO SECTION (Fintech Style) */}
+            <div className={`relative overflow-hidden rounded-3xl p-8 shadow-2xl ${
+                isDarkMode 
+                ? 'bg-gradient-to-br from-indigo-900 via-slate-900 to-black border border-white/10' 
+                : 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-indigo-200'
+            }`}>
+                {/* Background Decor */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
 
-            {/* 2. Action Header */}
-            <div className="flex justify-between items-center">
-                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>My Holdings</h2>
-                <button 
-                    onClick={() => setShowForm(!showForm)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition"
-                >
-                    {showForm ? 'Close' : '+ Add Transaction'}
-                </button>
-            </div>
-
-            {/* 3. Transaction Form */}
-            {showForm && (
-                <motion.form 
-                    initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                    onSubmit={handleTransaction}
-                    className={`p-4 rounded-2xl border grid grid-cols-2 md:grid-cols-5 gap-3 items-end ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
-                >
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                     <div>
-                        <label className="text-[10px] uppercase font-bold opacity-60 ml-1">Symbol</label>
-                        <input required placeholder="e.g. RELIANCE" className={`w-full p-2 rounded-lg text-sm border bg-transparent ${isDarkMode ? 'border-slate-600' : 'border-slate-300'}`} 
-                            value={txn.symbol} onChange={e => setTxn({...txn, symbol: e.target.value.toUpperCase()})} />
+                        <div className="flex items-center gap-2 opacity-80 mb-1">
+                            <WalletIcon />
+                            <span className="text-sm font-bold uppercase tracking-wider">Total Portfolio Value</span>
+                        </div>
+                        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white">
+                            ₹{currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </h1>
+                        <div className="mt-2 flex items-center gap-3">
+                            <span className="opacity-70 text-sm">Invested: <span className="font-bold text-white">₹{totalInvested.toLocaleString()}</span></span>
+                            <span className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${totalPnL >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+                                {totalPnL >= 0 ? '+' : ''}₹{totalPnL.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pnlPercentage}%)
+                                {totalPnL >= 0 && <TrendUp />}
+                            </span>
+                        </div>
                     </div>
-                    <div>
-                        <label className="text-[10px] uppercase font-bold opacity-60 ml-1">Qty</label>
-                        <input required type="number" placeholder="10" className={`w-full p-2 rounded-lg text-sm border bg-transparent ${isDarkMode ? 'border-slate-600' : 'border-slate-300'}`} 
-                            value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} />
-                    </div>
-                    <div>
-                        <label className="text-[10px] uppercase font-bold opacity-60 ml-1">Price</label>
-                        <input required type="number" placeholder="2400" className={`w-full p-2 rounded-lg text-sm border bg-transparent ${isDarkMode ? 'border-slate-600' : 'border-slate-300'}`} 
-                            value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} />
-                    </div>
-                    <div>
-                        <label className="text-[10px] uppercase font-bold opacity-60 ml-1">Type</label>
-                        <select className={`w-full p-2 rounded-lg text-sm border bg-transparent ${isDarkMode ? 'border-slate-600' : 'border-slate-300'}`}
-                            value={txn.type} onChange={e => setTxn({...txn, type: e.target.value})}>
-                            <option value="BUY">BUY</option>
-                            <option value="SELL">SELL</option>
-                        </select>
-                    </div>
-                    <button type="submit" className="h-10 bg-emerald-500 text-white rounded-lg font-bold text-sm hover:bg-emerald-600 transition">
-                        Submit
+                    
+                    <button 
+                        onClick={() => setShowForm(!showForm)}
+                        className="group flex items-center gap-2 px-6 py-3 bg-white text-indigo-700 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-all shadow-lg active:scale-95"
+                    >
+                        {showForm ? 'Close' : 'Add Transaction'}
+                        <span className={`transition-transform duration-300 ${showForm ? 'rotate-45' : 'group-hover:rotate-90'}`}>
+                            <PlusIcon />
+                        </span>
                     </button>
-                </motion.form>
-            )}
+                </div>
+            </div>
 
-            {/* 4. Holdings Table */}
-            <div className={`rounded-2xl border overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                <table className="w-full text-left text-sm">
-                    <thead className={`text-xs uppercase font-bold opacity-60 border-b ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-                        <tr>
-                            <th className="p-4">Symbol</th>
-                            <th className="p-4 text-center">Qty</th>
-                            <th className="p-4 text-right">Avg Price</th>
-                            <th className="p-4 text-right">Inv. Value</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                        {holdings.length === 0 ? (
-                            <tr><td colSpan="4" className="p-8 text-center opacity-50">No holdings found. Add your first stock!</td></tr>
-                        ) : (
-                            holdings.map((h) => (
-                                <tr key={h._id} className={`transition ${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
-                                    <td className="p-4 font-bold">{h.symbol}</td>
-                                    <td className="p-4 text-center opacity-80">{h.quantity}</td>
-                                    <td className="p-4 text-right">₹{h.avg_price.toFixed(2)}</td>
-                                    <td className="p-4 text-right font-medium">₹{(h.quantity * h.avg_price).toLocaleString()}</td>
+            {/* 2. TRANSACTION FORM (Smooth Slide) */}
+            <AnimatePresence>
+                {showForm && (
+                    <motion.div 
+                        initial={{ height: 0, opacity: 0 }} 
+                        animate={{ height: 'auto', opacity: 1 }} 
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <form onSubmit={handleTransaction} className={`p-6 rounded-3xl border mb-2 grid grid-cols-1 md:grid-cols-5 gap-4 items-end shadow-xl ${
+                            isDarkMode ? 'bg-[#1e2433] border-slate-700' : 'bg-white border-slate-100 shadow-slate-200/50'
+                        }`}>
+                            <InputGroup label="Symbol" placeholder="TATASTEEL" value={txn.symbol} onChange={e => setTxn({...txn, symbol: e.target.value.toUpperCase()})} isDarkMode={isDarkMode} />
+                            <InputGroup label="Quantity" type="number" placeholder="10" value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} isDarkMode={isDarkMode} />
+                            <InputGroup label="Price" type="number" placeholder="125.50" value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} isDarkMode={isDarkMode} />
+                            
+                            <div className="w-full">
+                                <label className="text-[10px] uppercase font-bold opacity-60 ml-1 mb-1 block">Type</label>
+                                <div className={`flex rounded-xl p-1 border ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                                    {['BUY', 'SELL'].map((type) => (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            onClick={() => setTxn({ ...txn, type })}
+                                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                                                txn.type === type
+                                                ? (type === 'BUY' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-red-500 text-white shadow-lg')
+                                                : 'opacity-50 hover:opacity-100'
+                                            }`}
+                                        >
+                                            {type}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button type="submit" className="h-[46px] bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition shadow-lg shadow-indigo-500/30">
+                                Save Transaction
+                            </button>
+                        </form>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 3. HOLDINGS TABLE (Premium List) */}
+            <div className={`rounded-3xl border overflow-hidden ${isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/40'}`}>
+                <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Current Holdings</h3>
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+                        {holdings.length} Stocks
+                    </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className={`text-xs uppercase font-bold opacity-50 ${isDarkMode ? 'text-slate-400 bg-slate-900/50' : 'text-slate-500 bg-slate-50'}`}>
+                            <tr>
+                                <th className="p-5 font-bold tracking-wider">Stock Symbol</th>
+                                <th className="p-5 text-center tracking-wider">Qty</th>
+                                <th className="p-5 text-right tracking-wider">Avg. Price</th>
+                                <th className="p-5 text-right tracking-wider">Cur. Value</th>
+                                <th className="p-5 text-right tracking-wider">P/L</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                            {holdings.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="p-12 text-center opacity-50 flex flex-col items-center justify-center">
+                                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3 text-2xl">💼</div>
+                                        <span>No holdings found. Start investing!</span>
+                                    </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ) : (
+                                holdings.map((h) => {
+                                    // Row Level Calc
+                                    const investVal = h.quantity * h.avg_price;
+                                    const curVal = investVal * 1.05; // Dummy Logic
+                                    const rowPnL = curVal - investVal;
+
+                                    return (
+                                        <tr key={h._id} className={`group transition-all ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-indigo-50/30'}`}>
+                                            <td className="p-5">
+                                                <div className="font-black text-sm">{h.symbol}</div>
+                                                <div className="text-[10px] opacity-50">NSE Equity</div>
+                                            </td>
+                                            <td className="p-5 text-center font-medium opacity-80">{h.quantity}</td>
+                                            <td className="p-5 text-right opacity-80">₹{h.avg_price.toFixed(2)}</td>
+                                            <td className="p-5 text-right font-bold">₹{curVal.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                                            <td className={`p-5 text-right font-bold ${rowPnL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                {rowPnL >= 0 ? '+' : ''}₹{rowPnL.toFixed(0)}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
 }
 
-const SummaryCard = ({ label, value, color, isDarkMode }) => (
-    <div className={`p-5 rounded-2xl border flex flex-col justify-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-        <p className="text-xs font-bold opacity-50 uppercase tracking-wider mb-1">{label}</p>
-        <p className={`text-2xl font-black ${color}`}>{value}</p>
+// Reusable Input Component
+const InputGroup = ({ label, type="text", placeholder, value, onChange, isDarkMode }) => (
+    <div className="w-full">
+        <label className="text-[10px] uppercase font-bold opacity-60 ml-1 mb-1 block">{label}</label>
+        <input 
+            required 
+            type={type} 
+            placeholder={placeholder} 
+            className={`w-full px-4 py-3 rounded-xl text-sm border font-medium outline-none transition-all ${
+                isDarkMode 
+                ? 'bg-slate-900 border-slate-700 text-white focus:border-indigo-500 focus:bg-slate-800' 
+                : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-500 focus:bg-white focus:shadow-lg focus:shadow-indigo-100'
+            }`} 
+            value={value} 
+            onChange={onChange} 
+        />
     </div>
 );
