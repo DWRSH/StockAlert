@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CloseIcon, DashboardIcon, NewsIcon, SunIcon, MoonIcon, LogOutIcon } from '../common/Icons';
+// ✅ Added BriefcaseIcon import
+import { CloseIcon, DashboardIcon, NewsIcon, SunIcon, MoonIcon, LogOutIcon, BriefcaseIcon } from '../common/Icons';
 import MarketStatusCard from '../dashboard/MarketStatusCard';
 
 export default function MobileMenu({ 
@@ -98,7 +99,7 @@ export default function MobileMenu({
                                 </div>
                             </div>
 
-                            {/* Market Status (User requested feature) */}
+                            {/* Market Status */}
                             <div className="mb-6">
                                 <MarketStatusCard indices={indices} theme={theme} isDarkMode={isDarkMode} />
                             </div>
@@ -112,6 +113,14 @@ export default function MobileMenu({
                                     label="Dashboard" 
                                     icon={<DashboardIcon />} 
                                     onClick={() => { setActiveView('dashboard'); setIsMobileMenuOpen(false); }} 
+                                />
+                                
+                                {/* ✅ NEW: Portfolio Item */}
+                                <MenuItem 
+                                    id="portfolio" 
+                                    label="Portfolio" 
+                                    icon={<BriefcaseIcon />} 
+                                    onClick={() => { setActiveView('portfolio'); setIsMobileMenuOpen(false); }} 
                                 />
                                 
                                 <MenuItem 
@@ -145,7 +154,7 @@ export default function MobileMenu({
                                 onClick={logout}
                                 className="w-full flex items-center justify-center gap-2 p-3.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white font-bold transition-all active:scale-95"
                             >
-                                <LogOutIcon /> {/* If LogOutIcon isn't imported, standard SVG will work, but I assumed you have it based on context */}
+                                <LogOutIcon />
                                 Sign Out
                             </button>
                         </div>
