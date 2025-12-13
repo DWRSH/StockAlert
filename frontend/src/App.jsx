@@ -9,6 +9,7 @@ import MobileMenu from './components/layout/MobileMenu'
 import AlertForm from './components/dashboard/AlertForm'
 import AlertList from './components/dashboard/AlertList'
 import NewsFeed from './components/news/NewsFeed'
+import Portfolio from './components/dashboard/Portfolio' // ✅ NEW IMPORT
 
 // --- Modals ---
 import ChartModal from './components/modals/ChartModal'
@@ -16,7 +17,7 @@ import ProfileModal from './components/modals/ProfileModal'
 import AiModal from './components/modals/AiModal'
 
 // --- AI Chat Feature ---
-import ChatAssistant from './components/chat/ChatAssistant' // ✅ Imported
+import ChatAssistant from './components/chat/ChatAssistant' 
 
 // --- Utils & Icons ---
 import { API_URL, getThemeStyles } from './utils/helpers'
@@ -36,6 +37,7 @@ function App() {
   const [isInitialLoading, setIsInitialLoading] = useState(true)
   
   // UI States
+  // activeView options: 'dashboard', 'portfolio', 'news'
   const [activeView, setActiveView] = useState('dashboard') 
   const [generalNews, setGeneralNews] = useState([])
   const [isNewsLoading, setIsNewsLoading] = useState(false)
@@ -233,10 +235,15 @@ function App() {
             </div>
 
             <div className="max-w-5xl mx-auto p-4 md:p-8 lg:p-10 pb-24">
-                {activeView === 'dashboard' ? (
+                
+                {/* ✅ View Switching Logic */}
+                {activeView === 'portfolio' ? (
+                    // 1. Portfolio View
+                    <Portfolio token={token} isDarkMode={isDarkMode} />
+                ) : activeView === 'dashboard' ? (
+                    // 2. Dashboard View
                     <>
                          <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
-                            {/* Stats Cards manually rendered here for simplicity, can be component */}
                             {[
                                 {label: 'Total', val: alerts.length, color: isDarkMode ? 'text-white' : 'text-slate-900', bg: isDarkMode ? 'from-slate-800 to-slate-900 border-slate-700' : 'from-white to-slate-50 border-slate-200'},
                                 {label: 'Active', val: alerts.filter(a => a.status !== 'triggered').length, color: 'text-indigo-500', bg: isDarkMode ? 'from-indigo-900/20 to-slate-900 border-indigo-500/20' : 'from-indigo-50 to-white border-indigo-100'},
@@ -265,6 +272,7 @@ function App() {
                         />
                     </>
                 ) : (
+                    // 3. News View
                     <NewsFeed 
                         generalNews={generalNews}
                         isNewsLoading={isNewsLoading}
@@ -296,7 +304,6 @@ function App() {
         theme={theme} isDarkMode={isDarkMode}
       />
 
-      {/* ✅ AI CHAT ASSISTANT (Floating) */}
       <ChatAssistant theme={theme} isDarkMode={isDarkMode} />
 
     </div>
