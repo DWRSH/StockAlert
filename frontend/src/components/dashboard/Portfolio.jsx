@@ -109,7 +109,7 @@ export default function Portfolio({ token, isDarkMode }) {
                     <div className="absolute top-0 right-0 w-32 md:w-48 h-32 md:h-48 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 opacity-90 mb-1">
-                            <WalletIcon />
+                            
                             <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">Net Worth</span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-2">
