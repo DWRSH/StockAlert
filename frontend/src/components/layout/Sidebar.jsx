@@ -1,5 +1,6 @@
 import React from 'react';
-import { LogoIcon, DashboardIcon, NewsIcon, SunIcon, MoonIcon } from '../common/Icons';
+// ✅ Added BriefcaseIcon import
+import { LogoIcon, DashboardIcon, NewsIcon, SunIcon, MoonIcon, BriefcaseIcon } from '../common/Icons';
 import MarketStatusCard from '../dashboard/MarketStatusCard';
 
 const SidebarItem = ({ icon, label, active, onClick, isDarkMode }) => (
@@ -44,6 +45,7 @@ export default function Sidebar({ theme, isDarkMode, activeView, setActiveView, 
                 
                 <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
                     <p className="text-xs font-bold opacity-50 uppercase mb-3 tracking-widest">Menu</p>
+                    
                     <SidebarItem 
                         icon={<DashboardIcon/>} 
                         label="Dashboard" 
@@ -51,7 +53,20 @@ export default function Sidebar({ theme, isDarkMode, activeView, setActiveView, 
                         onClick={() => setActiveView('dashboard')} 
                         isDarkMode={isDarkMode}
                     />
+                    
                     <div className="h-2"></div>
+                    
+                    {/* ✅ NEW: Portfolio Button */}
+                    <SidebarItem 
+                        icon={<BriefcaseIcon />} 
+                        label="Portfolio" 
+                        active={activeView === 'portfolio'} 
+                        onClick={() => setActiveView('portfolio')} 
+                        isDarkMode={isDarkMode} 
+                    />
+
+                    <div className="h-2"></div>
+                    
                     <SidebarItem 
                         icon={<NewsIcon/>} 
                         label="Market News" 
