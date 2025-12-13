@@ -100,7 +100,6 @@ export default function MobileMenu({
 
                             {/* Market Status (User requested feature) */}
                             <div className="mb-6">
-                                <p className="text-[10px] uppercase font-bold text-slate-500 mb-2 px-1">Market Overview</p>
                                 <MarketStatusCard indices={indices} theme={theme} isDarkMode={isDarkMode} />
                             </div>
 
