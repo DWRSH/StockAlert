@@ -8,14 +8,22 @@ class User(Document):
     # Indexed se DB search fast hoti hai aur duplicate email nahi aayenge
     email: Indexed(EmailStr, unique=True) 
     hashed_password: str
+    name: Optional[str] = None
+    
+    # Verification Fields
     is_verified: bool = False
     verification_token: Optional[str] = None
-    
-    # Token Expiry Check karne ke liye field
     verification_sent_at: Optional[datetime] = None
 
-    # ✅ YAHAN ROLE FIELD ADD KIYA HAI
+    # Role Field (Admin/User)
     role: str = "user" 
+
+    # 👇 NEW FIELD: User Ban/Suspend System ke liye
+    # True = Active, False = Banned
+    is_active: bool = True 
+
+    # Creation Time (Optional but good for sorting)
+    created_at: datetime = datetime.now()
 
     class Settings:
         name = "users"
@@ -24,4 +32,4 @@ class User(Document):
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
-    name: Optional[str] = None # Name bhi optional rakh sakte hain agar chahiye
+    name: Optional[str] = None
