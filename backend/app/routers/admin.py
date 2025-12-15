@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from beanie import PydanticObjectId
-from pydantic import BaseModel # ✅ Input Validation ke liye
+from pydantic import BaseModel 
 
 # ✅ User, Alert Models & Email Utils Import
 from app.models.user import User
 from app.models.alert import Alert 
 from app.core.config import settings
-from app.utils.email import send_generic_email # ✅ Email Function Import
+from app.utils.email import send_generic_email 
 
 router = APIRouter()
 
@@ -102,10 +102,37 @@ async def delete_user(user_id: str, admin: User = Depends(get_admin_user)):
         raise HTTPException(status_code=400, detail="Delete Failed")
 
 # ==========================================
-# 📢 API 4: Broadcast Notification (NEW)
+# 🚫 API 4: Toggle User Status (BAN/UNBAN) - ✅ NEW
+# ==========================================
+@router.patch("/admin/user/{user_id}/toggle-status")
+async def toggle_user_status(user_id: str, admin: User = Depends(get_admin_user)):
+    # 1. Self-Ban Prevention
+    if str(admin.id) == user_id:
+        raise HTTPException(status_code=400, detail="You cannot ban yourself")
+
+    try:
+        user = await User.get(PydanticObjectId(user_id))
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # 2. Toggle Status (True -> False, False -> True)
+        # getattr use kiya taaki purane users jinke paas field nahi hai wo crash na karein (default True)
+        current_status = getattr(user, "is_active", True)
+        user.is_active = not current_status
+        
+        await user.save()
+        
+        status_msg = "Activated" if user.is_active else "Suspended"
+        return {"message": f"User {status_msg} successfully", "is_active": user.is_active}
+        
+    except Exception as e:
+        print(f"Toggle Error: {e}")
+        raise HTTPException(status_code=400, detail="Action Failed")
+
+# ==========================================
+# 📢 API 5: Broadcast Notification
 # ==========================================
 
-# Request Body Schema
 class BroadcastRequest(BaseModel):
     subject: str
     message: str
@@ -118,14 +145,11 @@ async def send_broadcast(
 ):
     """
     Background Task ka use karke saare users ko email bhejta hai.
-    Isse Admin ka UI hang nahi karega.
     """
-    # 1. Fetch all users (sirf email field chahiye to optimize kar sakte hain, par abhi simple rakha hai)
     users = await User.find_all().to_list()
     
     count = 0
     for user in users:
-        # 2. Add email task to queue
         background_tasks.add_task(send_generic_email, user.email, data.subject, data.message)
         count += 1
         
