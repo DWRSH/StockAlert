@@ -1,86 +1,162 @@
-# File: app/services/finance.py
+# File: app/routers/stocks.py
 
+from fastapi import APIRouter
+from app.services.finance import get_live_price, get_google_news
+from app.services.ai_service import ai_engine
 import requests
 import yfinance as yf
 import pandas as pd
-import feedparser
-import urllib.parse
-import time
-from datetime import datetime
-from bs4 import BeautifulSoup
-from async_lru import alru_cache  # 👈 Import Caching
+from async_lru import alru_cache
 
-import logging
-logger = logging.getLogger("StockWatcher")
+router = APIRouter()
 
-# --- 1. YAHOO FINANCE (Cached for 60 Seconds) ---
-# ttl=60 matlab 60 second tak purana price yaad rakho
-@alru_cache(maxsize=100, ttl=60) 
-async def get_yahoo_price(symbol: str):
+# ==========================================
+# 1. HELPER: CACHED SEARCH (Updated with Price)
+# ==========================================
+@alru_cache(maxsize=200, ttl=3600)
+async def fetch_yahoo_search(query: str):
     try:
-        if not symbol.endswith((".NS", ".BO")):
-            symbol = f"{symbol}.NS"
+        # 1. Search API Call
+        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=10&newsCount=0"
+        headers = { "User-Agent": "Mozilla/5.0" }
+        res = requests.get(url, headers=headers, timeout=3)
+        data = res.json()
         
-        # 'Ticker' is slightly faster for metadata
-        ticker = yf.Ticker(symbol)
-        
-        # Fast fetch: Sirf 'fast_info' use karte hain (Network call lighter hota hai)
-        try:
-            price = ticker.fast_info['last_price']
-            return round(float(price), 2)
-        except:
-            # Fallback to history if fast_info fails
-            data = ticker.history(period="1d")
-            if not data.empty:
-                return round(float(data["Close"].iloc[-1]), 2)
+        suggestions = []
+        if "quotes" in data:
+            # 2. Filter Indian Stocks (.NS / .BO)
+            # Sirf Top 5 results lenge taaki Price fetch fast ho
+            filtered_quotes = [
+                q for q in data["quotes"] 
+                if q.get("symbol", "").endswith((".NS", ".BO"))
+            ][:5]
 
+            # 3. Get Prices for these symbols
+            if filtered_quotes:
+                symbols = [q["symbol"] for q in filtered_quotes]
+                
+                # Bulk fetch current prices (Optimization)
+                try:
+                    # 'period=1d' latest data lata hai
+                    price_data = yf.download(symbols, period="1d", progress=False, auto_adjust=True)
+                    
+                    for q in filtered_quotes:
+                        sym = q.get("symbol")
+                        price = 0.0
+                        
+                        try:
+                            # Handle different dataframe structures (Single vs Multi-symbol)
+                            if len(symbols) == 1:
+                                if not price_data.empty:
+                                    price = float(price_data["Close"].iloc[-1])
+                            else:
+                                # Multi-index columns handling
+                                if sym in price_data["Close"].columns:
+                                    price = float(price_data["Close"][sym].iloc[-1])
+                        except:
+                            price = 0.0
+
+                        suggestions.append({
+                            "symbol": sym,
+                            "name": q.get("longname") or q.get("shortname"), # Name fallback
+                            "current_price": round(price, 2) # ✅ Added Price here
+                        })
+                except Exception as e:
+                    print(f"Price Fetch Error: {e}")
+                    # Agar price fail ho jaye, to bina price ke return karo
+                    for q in filtered_quotes:
+                        suggestions.append({
+                            "symbol": q.get("symbol"),
+                            "name": q.get("longname"),
+                            "current_price": 0.0
+                        })
+
+        return suggestions
     except Exception as e:
-        logger.warning(f"⚠️ Yahoo Finance failed for {symbol}: {e}")
-    return None
+        print(f"Search Error: {e}")
+        return []
 
-# --- 2. GOOGLE FINANCE (Backup) ---
-async def scrape_google_finance(symbol: str):
-    # ... (Same old code here) ...
-    # (Pichla Google Finance code yahan same rahega)
+# ==========================================
+# 2. API ROUTES
+# ==========================================
+
+# --- Market Indices (Nifty 50 & Sensex) ---
+@router.get("/indices")
+async def get_market_indices():
     try:
-        clean_sym = symbol.replace(".NS", "").replace(".BO", "")
-        url = f"https://www.google.com/finance/quote/{clean_sym}:NSE"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers, timeout=3) # Timeout kam kar diya 3s
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, "html.parser")
-            price_div = soup.find("div", {"class": "YMlKec fxKbKc"})
-            if price_div:
-                return float(price_div.text.replace("₹", "").replace(",", "").strip())
-    except: pass
-    return None
+        nifty_data = yf.download("^NSEI", period="1d", auto_adjust=True, progress=False)
+        sensex_data = yf.download("^BSESN", period="1d", auto_adjust=True, progress=False)
+        
+        # Data Flattening
+        if not nifty_data.empty and isinstance(nifty_data.columns, pd.MultiIndex):
+            nifty_data.columns = nifty_data.columns.get_level_values(0)
+        
+        if not sensex_data.empty and isinstance(sensex_data.columns, pd.MultiIndex):
+            sensex_data.columns = sensex_data.columns.get_level_values(0)
 
-# --- MAIN FUNCTION (Now Async for Speed) ---
-async def get_live_price(symbol: str):
-    # Step 1: Try Yahoo (Cached)
-    price = await get_yahoo_price(symbol)
-    if price: return price
+        nifty = round(float(nifty_data["Close"].iloc[-1]), 2) if not nifty_data.empty else 0.0
+        sensex = round(float(sensex_data["Close"].iloc[-1]), 2) if not sensex_data.empty else 0.0
+        
+        return {"nifty": nifty, "sensex": sensex}
+    except Exception as e:
+        print(f"Indices Error: {e}")
+        return {"nifty": 0.0, "sensex": 0.0}
 
-    # Step 2: Try Google (Backup)
-    print(f"🔄 Switching to Google Finance for {symbol}...")
-    return await scrape_google_finance(symbol)
+# --- Search Stock Route ---
+@router.get("/search-stock")
+async def search_stock(query: str):
+    return await fetch_yahoo_search(query)
 
-# --- NEWS (Cached for 10 Minutes) ---
-@alru_cache(maxsize=10, ttl=600) 
-async def get_google_news(query: str):
-    # ... (Same News Logic) ...
+# --- Graph Data (History) ---
+@router.get("/stock-history/{symbol}")
+async def get_stock_history(symbol: str):
     try:
-        encoded_query = urllib.parse.quote(f"{query} stock market india")
-        rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-IN&gl=IN&ceid=IN:en"
-        feed = feedparser.parse(rss_url)
-        news_items = []
-        for entry in feed.entries[:8]:
-            news_items.append({
-                "title": entry.title,
-                "link": entry.link,
-                "publisher": entry.source.title if 'source' in entry else "Google News",
-                "time": datetime.fromtimestamp(time.mktime(entry.published_parsed)).strftime('%d %b, %H:%M') if entry.get('published_parsed') else "Recent",
-                "img": None 
-            })
-        return news_items
+        clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
+        tickers_to_try = [f"{clean_sym}.NS", f"{clean_sym}.BO"]
+        
+        for ticker_name in tickers_to_try:
+            try:
+                data = yf.download(ticker_name, period="1mo", interval="1d", auto_adjust=True, progress=False)
+                
+                if not data.empty:
+                    if isinstance(data.columns, pd.MultiIndex):
+                        data.columns = data.columns.get_level_values(0)
+                    
+                    data = data.reset_index()
+                    result = []
+                    
+                    for _, row in data.iterrows():
+                        try:
+                            date_val = row['Date'].strftime("%d %b")
+                            close_val = row['Close']
+                            price_val = float(close_val.iloc[0]) if hasattr(close_val, 'iloc') else float(close_val)
+                            
+                            if price_val > 0:
+                                result.append({"date": date_val, "price": round(price_val, 2)})
+                        except: continue
+                    
+                    if result: return result
+            except: continue
+        return []
     except: return []
+
+# --- AI Analysis Route ---
+@router.get("/analyze-stock/{symbol}")
+async def analyze_stock(symbol: str):
+    current_price = await get_live_price(symbol)
+    
+    if not current_price:
+        return {"analysis": "Could not fetch stock price. Please try again."}
+    
+    change_pct = "N/A" 
+    
+    return {"analysis": ai_engine.analyze(symbol, current_price, change_pct, "Yahoo Finance")}
+
+# --- News Routes ---
+@router.get("/market-news")
+async def get_market_news_route():
+    return await get_google_news("Indian Stock Market")
+
+@router.get("/stock-news/{symbol}")
+async def get_stock_news_route(symbol: str):
+    return await get_google_news(symbol)
