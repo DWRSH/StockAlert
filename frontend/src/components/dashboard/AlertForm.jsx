@@ -12,7 +12,7 @@ export default function AlertForm({ form, setForm, handleSubmit, loading, sugges
             </div>
             <input 
                 type="text" 
-                placeholder="Search stock (e.g. TATA)" 
+                placeholder="Search stock" 
                 value={form.symbol}
                 onChange={(e) => setForm({...form, symbol: e.target.value.toUpperCase()})}
                 className={`w-full bg-transparent border-none outline-none py-3 pl-12 pr-4 font-medium h-full ${theme.input}`} 
@@ -31,7 +31,7 @@ export default function AlertForm({ form, setForm, handleSubmit, loading, sugges
                             <div 
                                 key={i} 
                                 onClick={() => {
-                                    setForm({...form, symbol: s.symbol, target: s.current_price || ''}); // Optional: Auto-fill target with current price
+                                    setForm({...form, symbol: s.symbol}); // Optional: Auto-fill target with current price
                                     setShowSuggestions(false);
                                 }} 
                                 className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}
