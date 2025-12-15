@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { API_URL } from '../../utils/helpers';
 import { TrashIcon, UserIcon, DashboardIcon } from '../common/Icons';
 
-// --- ✨ NEW ICONS ---
+// --- ✨ ICONS (Added Lock & Unlock) ---
 const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>;
 const AdminBadgeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
@@ -13,6 +13,9 @@ const RefreshIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" hei
 const CopyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>;
 const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
 const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>;
+// 👇 New Icons for Ban System
+const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+const UnlockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>;
 
 export default function AdminDashboard({ token, isDarkMode }) {
     const [stats, setStats] = useState({ total_users: 0, total_alerts: 0, active_alerts: 0, triggered_alerts: 0 });
@@ -23,7 +26,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [broadcast, setBroadcast] = useState({ subject: '', message: '' });
     const [sending, setSending] = useState(false);
-    const [copiedEmail, setCopiedEmail] = useState(null); // For copy feedback
+    const [copiedEmail, setCopiedEmail] = useState(null); 
 
     const fetchAdminData = async () => {
         try {
@@ -58,6 +61,26 @@ export default function AdminDashboard({ token, isDarkMode }) {
         }
     };
 
+    // 🚫 NEW: Toggle Status Function (Ban/Unban)
+    const handleToggleStatus = async (userId, currentStatus) => {
+        // Optimistic UI Update (Immediate feedback)
+        const updatedUsers = users.map(u => 
+            u._id === userId ? { ...u, is_active: !currentStatus } : u
+        );
+        setUsers(updatedUsers);
+
+        try {
+            await axios.patch(`${API_URL}/admin/user/${userId}/toggle-status`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success(currentStatus ? "User Suspended 🚫" : "User Activated ✅");
+        } catch (error) {
+            // Revert on error
+            setUsers(users); 
+            toast.error("Failed to update status");
+        }
+    };
+
     const handleBroadcast = async (e) => {
         e.preventDefault();
         if(!broadcast.subject || !broadcast.message) return toast.error("Please fill all fields");
@@ -76,7 +99,6 @@ export default function AdminDashboard({ token, isDarkMode }) {
         }
     };
 
-    // ✨ Copy Email to Clipboard
     const copyToClipboard = (email) => {
         navigator.clipboard.writeText(email);
         setCopiedEmail(email);
@@ -88,7 +110,6 @@ export default function AdminDashboard({ token, isDarkMode }) {
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // ✨ Skeleton Loading UI
     if (loading) return (
         <div className="space-y-6 animate-pulse">
             <div className="h-8 w-48 bg-slate-300/20 rounded-lg"></div>
@@ -219,7 +240,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
                             <thead className={`text-[10px] uppercase tracking-wider font-bold sticky top-0 z-10 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 text-slate-500' : 'bg-slate-50/90 text-slate-400'}`}>
                                 <tr>
                                     <th className="p-5 pl-6">User Identity</th>
-                                    <th className="p-5">Role</th>
+                                    <th className="p-5">Status</th>
                                     <th className="p-5 text-right pr-6">Action</th>
                                 </tr>
                             </thead>
@@ -230,6 +251,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
                                         user={user} 
                                         isDarkMode={isDarkMode} 
                                         handleDeleteUser={handleDeleteUser} 
+                                        handleToggleStatus={handleToggleStatus}
                                         textMain={textMain}
                                         copyToClipboard={copyToClipboard}
                                         copiedEmail={copiedEmail}
@@ -249,6 +271,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
                                     user={user} 
                                     isDarkMode={isDarkMode} 
                                     handleDeleteUser={handleDeleteUser} 
+                                    handleToggleStatus={handleToggleStatus}
                                     textMain={textMain}
                                     copyToClipboard={copyToClipboard}
                                     copiedEmail={copiedEmail}
@@ -276,13 +299,16 @@ export default function AdminDashboard({ token, isDarkMode }) {
 
 // ---------------- SUB COMPONENTS ----------------
 
-const UserRow = ({ user, isDarkMode, handleDeleteUser, textMain, copyToClipboard, copiedEmail }) => {
+const UserRow = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus, textMain, copyToClipboard, copiedEmail }) => {
     const initial = user.email.charAt(0).toUpperCase();
     const colors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500'];
     const colorClass = colors[user.email.length % colors.length];
+    
+    // Check Active Status (Default True if missing)
+    const isActive = user.is_active !== false;
 
     return (
-        <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}`}>
+        <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'} ${!isActive ? 'opacity-60 bg-red-500/5' : ''}`}>
             <td className="p-4 pl-6">
                 <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-full ${colorClass} flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-black/5 ring-2 ring-white/10`}>
@@ -304,7 +330,22 @@ const UserRow = ({ user, isDarkMode, handleDeleteUser, textMain, copyToClipboard
                 </div>
             </td>
             <td className="p-4">
-                <RoleBadge role={user.role} isDarkMode={isDarkMode} />
+                <div className="flex flex-col gap-2 items-start">
+                    <RoleBadge role={user.role} isDarkMode={isDarkMode} />
+                    
+                    {/* ✨ BAN/UNBAN TOGGLE */}
+                    {user.role !== 'admin' && (
+                        <button 
+                            onClick={() => handleToggleStatus(user._id, isActive)}
+                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md border w-fit transition-all ${isActive 
+                                ? 'border-emerald-500/20 text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20' 
+                                : 'border-red-500/20 text-red-600 bg-red-500/10 hover:bg-red-500/20'}`}
+                            title={isActive ? "Suspend User" : "Activate User"}
+                        >
+                            {isActive ? <><UnlockIcon /> ACTIVE</> : <><LockIcon /> BANNED</>}
+                        </button>
+                    )}
+                </div>
             </td>
             <td className="p-4 pr-6 text-right">
                 <DeleteButton user={user} handleDeleteUser={handleDeleteUser} />
@@ -313,13 +354,14 @@ const UserRow = ({ user, isDarkMode, handleDeleteUser, textMain, copyToClipboard
     );
 };
 
-const UserMobileCard = ({ user, isDarkMode, handleDeleteUser, textMain, copyToClipboard, copiedEmail }) => {
+const UserMobileCard = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus, textMain, copyToClipboard, copiedEmail }) => {
     const initial = user.email.charAt(0).toUpperCase();
     const colors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500'];
     const colorClass = colors[user.email.length % colors.length];
+    const isActive = user.is_active !== false;
 
     return (
-        <div className={`p-4 flex items-center justify-between ${isDarkMode ? 'active:bg-slate-800' : 'active:bg-slate-50'}`}>
+        <div className={`p-4 flex items-center justify-between ${isDarkMode ? 'active:bg-slate-800' : 'active:bg-slate-50'} ${!isActive ? 'opacity-70 bg-red-500/5' : ''}`}>
             <div className="flex items-center gap-3 overflow-hidden">
                 <div className={`w-10 h-10 rounded-full flex-shrink-0 ${colorClass} flex items-center justify-center text-white font-bold shadow-md`}>
                     {initial}
@@ -332,9 +374,16 @@ const UserMobileCard = ({ user, isDarkMode, handleDeleteUser, textMain, copyToCl
                         {user.email}
                         {copiedEmail === user.email && <span className="text-emerald-500"><CheckIcon /></span>}
                     </button>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1.5">
                         <RoleBadge role={user.role} isDarkMode={isDarkMode} />
-                        <span className="text-[10px] opacity-40">#{user._id.slice(-4)}</span>
+                        {user.role !== 'admin' && (
+                             <button 
+                                onClick={() => handleToggleStatus(user._id, isActive)}
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${isActive ? 'text-emerald-500 border-emerald-500/30' : 'text-red-500 border-red-500/30 bg-red-500/10'}`}
+                            >
+                                {isActive ? "ACTIVE" : "BANNED"}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
