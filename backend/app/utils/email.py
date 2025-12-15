@@ -33,7 +33,7 @@ def send_email_sync(to_email: str, subject: str, html_content: str):
     msg.set_content(html_content, subtype="html")
 
     try:
-        print(f"🔄 Connecting to {SMTP_SERVER}:{SMTP_PORT}...")
+        # print(f"🔄 Connecting to {SMTP_SERVER}:{SMTP_PORT}...")
         
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30) as server:
             server.ehlo()
@@ -59,7 +59,6 @@ def send_email_sync(to_email: str, subject: str, html_content: str):
 async def send_email_notification(to_email: str, symbol: str, current_price: float, target_price: float):
     subject = f"🚀 Alert Triggered: {symbol} is now ₹{current_price}"
     
-    # Note: In Python f-strings, CSS braces { } must be doubled {{ }}
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -158,4 +157,46 @@ async def send_verification_email(to_email: str, token: str):
     </body>
     </html>
     """
+    return send_email_sync(to_email, subject, html_content)
+
+# ✅ NEW FUNCTION: BROADCAST / ANNOUNCEMENT EMAIL
+def send_generic_email(to_email: str, subject: str, body: str):
+    """
+    Admin Announcements ke liye function.
+    Ye sync 'send_email_sync' ko call karta hai, 
+    jo BackgroundTasks ke saath perfectly kaam karega.
+    """
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 0; }}
+            .email-container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
+            .header {{ background-color: #4F46E5; padding: 20px; text-align: center; }}
+            .header h1 {{ color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 1px; }}
+            .content {{ padding: 30px; color: #334155; line-height: 1.6; }}
+            .footer {{ background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; }}
+        </style>
+    </head>
+    <body>
+        <div class="email-container">
+            <div class="header">
+                <h1>📢 ANNOUNCEMENT</h1>
+            </div>
+            <div class="content">
+                <p style="font-size: 16px; margin-top: 0;">Hello,</p>
+                <p style="font-size: 16px;">{body}</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="font-size: 14px; color: #64748b;">Best regards,<br>The Stock Watcher Team</p>
+            </div>
+            <div class="footer">
+                <p>&copy; 2025 Stock Watcher Inc. • Automated Broadcast</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
     return send_email_sync(to_email, subject, html_content)
