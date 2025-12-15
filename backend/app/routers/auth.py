@@ -2,17 +2,47 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import RedirectResponse
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from jose import JWTError, jwt
+import secrets
+
+# Models & Utils
 from app.models.user import User, UserRegister
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.utils.email import send_verification_email
 from app.core.config import settings
-import secrets
 
 router = APIRouter()
 
 # ==========================================
-# 1. REGISTER ROUTE (Ye missing tha!)
+# 🔐 SECURITY HELPERS (Added for Dependency)
+# ==========================================
+# Token URL wahi hona chahiye jo Login route ka hai
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        # Token Decode
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    # User Find (Using Beanie Syntax)
+    user = await User.find_one(User.email == email)
+    if user is None:
+        raise credentials_exception
+    return user
+
+# ==========================================
+# 1. REGISTER ROUTE
 # ==========================================
 @router.post("/register")
 async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
@@ -30,7 +60,8 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
         email=user_data.email, 
         hashed_password=hashed_pass,
         is_verified=False,
-        verification_token=token
+        verification_token=token,
+        role="user" # Default role add kiya hai
     )
     await new_user.create()
     
@@ -59,13 +90,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": access_token, "token_type": "bearer"}
 
 # ==========================================
-# 3. VERIFY EMAIL ROUTE (Redirect Logic)
+# 3. VERIFY EMAIL ROUTE
 # ==========================================
 @router.get("/verify-email")
 async def verify_email(token: str):
     user = await User.find_one(User.verification_token == token)
     
-    # Agar token galat hai, Frontend pe error bhejo
+    # Agar token galat hai
     if not user:
         return RedirectResponse(url=f"{settings.FRONTEND_URL}?error=invalid_token")
     
@@ -74,5 +105,18 @@ async def verify_email(token: str):
     user.verification_token = None
     await user.save()
     
-    # Verification ke baad Frontend pe Login page par bhejo
+    # Redirect to Frontend
     return RedirectResponse(url=f"{settings.FRONTEND_URL}?verified=true")
+
+# ==========================================
+# 4. GET USER PROFILE (✅ Added to Fix 404)
+# ==========================================
+@router.get("/auth/getuser")
+async def get_user_profile(current_user: User = Depends(get_current_user)):
+    # Frontend ko Role aur Email chahiye
+    return {
+        "email": current_user.email,
+        # Agar name nahi hai to email ka first part bhej do
+        "name": current_user.email.split("@")[0], 
+        "role": getattr(current_user, "role", "user") 
+    }
