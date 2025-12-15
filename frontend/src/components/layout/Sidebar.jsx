@@ -1,6 +1,5 @@
 import React from 'react';
-// ✅ Added BriefcaseIcon import
-import { LogoIcon, DashboardIcon, NewsIcon, SunIcon, MoonIcon, BriefcaseIcon } from '../common/Icons';
+import { LogoIcon, DashboardIcon, NewsIcon, SunIcon, MoonIcon, BriefcaseIcon, UserIcon } from '../common/Icons'; 
 import MarketStatusCard from '../dashboard/MarketStatusCard';
 
 const SidebarItem = ({ icon, label, active, onClick, isDarkMode }) => (
@@ -17,7 +16,17 @@ const SidebarItem = ({ icon, label, active, onClick, isDarkMode }) => (
     </div>
 );
 
-export default function Sidebar({ theme, isDarkMode, activeView, setActiveView, isProfileOpen, setIsProfileOpen, userEmail, logout, toggleTheme, indices, getAvatarLetter }) {
+export default function Sidebar({ 
+    theme, isDarkMode, activeView, setActiveView, 
+    isProfileOpen, setIsProfileOpen, userEmail, logout, toggleTheme, 
+    indices, getAvatarLetter, 
+    userRole // ✅ Receive User Role from App.js
+}) {
+    // 🚀 Optimization: Removed internal axios call. 
+    // Now relying completely on 'userEmail' passed from App.js
+    
+    const displayEmail = userEmail || 'Loading...';
+
     return (
         <aside className={`w-64 flex-col hidden md:flex border-r transition-colors duration-300 ${theme.sidebar}`}>
             <div className="p-6 flex items-center gap-3">
@@ -26,16 +35,11 @@ export default function Sidebar({ theme, isDarkMode, activeView, setActiveView, 
             </div>
             
             <div className="px-4 mt-2">
-                <div 
-                    onClick={() => setIsProfileOpen(true)}
-                    className={`p-3 rounded-xl flex items-center gap-3 cursor-pointer transition-all border ${isDarkMode ? 'border-slate-700 hover:bg-slate-800 bg-slate-800/30' : 'border-slate-200 hover:bg-slate-100 bg-slate-50'}`}
-                >
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">
-                        {getAvatarLetter()}
-                    </div>
+                <div onClick={() => setIsProfileOpen(true)} className={`p-3 rounded-xl flex items-center gap-3 cursor-pointer transition-all border ${isDarkMode ? 'border-slate-700 hover:bg-slate-800 bg-slate-800/30' : 'border-slate-200 hover:bg-slate-100 bg-slate-50'}`}>
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">{getAvatarLetter()}</div>
                     <div className="flex-1 overflow-hidden">
                         <p className={`text-sm font-bold truncate ${theme.heading}`}>My Profile</p>
-                        <p className="text-[10px] opacity-50 uppercase tracking-wider">View Details</p>
+                        <p className="text-[10px] opacity-50 uppercase tracking-wider truncate">{displayEmail}</p>
                     </div>
                 </div>
             </div>
@@ -46,34 +50,25 @@ export default function Sidebar({ theme, isDarkMode, activeView, setActiveView, 
                 <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
                     <p className="text-xs font-bold opacity-50 uppercase mb-3 tracking-widest">Menu</p>
                     
-                    <SidebarItem 
-                        icon={<DashboardIcon/>} 
-                        label="Dashboard" 
-                        active={activeView === 'dashboard'} 
-                        onClick={() => setActiveView('dashboard')} 
-                        isDarkMode={isDarkMode}
-                    />
-                    
+                    <SidebarItem icon={<DashboardIcon/>} label="Dashboard" active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} isDarkMode={isDarkMode} />
                     <div className="h-2"></div>
-                    
-                    {/* ✅ NEW: Portfolio Button */}
-                    <SidebarItem 
-                        icon={<BriefcaseIcon />} 
-                        label="Portfolio" 
-                        active={activeView === 'portfolio'} 
-                        onClick={() => setActiveView('portfolio')} 
-                        isDarkMode={isDarkMode} 
-                    />
+                    <SidebarItem icon={<BriefcaseIcon />} label="Portfolio" active={activeView === 'portfolio'} onClick={() => setActiveView('portfolio')} isDarkMode={isDarkMode} />
+                    <div className="h-2"></div>
+                    <SidebarItem icon={<NewsIcon/>} label="Market News" active={activeView === 'news'} onClick={() => setActiveView('news')} isDarkMode={isDarkMode} />
 
-                    <div className="h-2"></div>
-                    
-                    <SidebarItem 
-                        icon={<NewsIcon/>} 
-                        label="Market News" 
-                        active={activeView === 'news'} 
-                        onClick={() => setActiveView('news')} 
-                        isDarkMode={isDarkMode}
-                    />
+                    {/* ✅ ADMIN BUTTON (Sirf Admin ko dikhega) */}
+                    {userRole === 'admin' && (
+                        <>
+                            <div className={`h-px my-3 ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}></div>
+                            <SidebarItem 
+                                icon={<UserIcon />} 
+                                label="Admin Panel" 
+                                active={activeView === 'admin'} 
+                                onClick={() => setActiveView('admin')} 
+                                isDarkMode={isDarkMode} 
+                            />
+                        </>
+                    )}
                 </div>
             </nav>
 
