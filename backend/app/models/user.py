@@ -14,6 +14,9 @@ class User(Document):
     # Token Expiry Check karne ke liye field
     verification_sent_at: Optional[datetime] = None
 
+    # ✅ YAHAN ROLE FIELD ADD KIYA HAI
+    role: str = "user" 
+
     class Settings:
         name = "users"
 
@@ -21,3 +24,4 @@ class User(Document):
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
+    name: Optional[str] = None # Name bhi optional rakh sakte hain agar chahiye
