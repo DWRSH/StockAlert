@@ -9,7 +9,7 @@ import logging
 # Local Imports
 from app.core.config import settings
 from app.db.database import init_db
-# ✅ Added 'admin' to imports
+# ✅ Admin Router is included here
 from app.routers import auth, stocks, alerts, chat, portfolio, admin
 from app.services.background import track_stock_prices
 
@@ -36,13 +36,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, title="Stock Alert System")
 
 # ==========================
-# 🔒 CORS SETTINGS (FIXED)
+# 🔒 CORS SETTINGS
 # ==========================
 origins = [
-    "http://localhost:5173",            # Local Dev
-    "http://127.0.0.1:5173",            # Local Dev IP
-    "https://safrontend.onrender.com",  # 👈 LIVE FRONTEND
-    "https://safrontend.onrender.com/"
+    "http://localhost:5173",      # Local Dev ke liye
+    "http://127.0.0.1:5173",      # Local Dev IP ke liye
+    settings.FRONTEND_URL         # ✅ Live URL .env file se aayega
 ]
 
 app.add_middleware(
@@ -61,7 +60,7 @@ app.include_router(stocks.router, tags=["Stocks"])
 app.include_router(alerts.router, tags=["Alerts"])
 app.include_router(chat.router, tags=["AI Chat"])
 app.include_router(portfolio.router, tags=["Portfolio"])
-app.include_router(admin.router, tags=["Admin"]) # 👈 NEW: Admin Router Added
+app.include_router(admin.router, tags=["Admin"]) 
 
 @app.get("/")
 def read_root():
