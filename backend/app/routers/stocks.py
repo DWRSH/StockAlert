@@ -11,28 +11,70 @@ from async_lru import alru_cache
 router = APIRouter()
 
 # ==========================================
-# 1. HELPER: CACHED SEARCH (Internal Function)
+# 1. HELPER: CACHED SEARCH (Updated with Price)
 # ==========================================
-# Search results ko 1 ghante (3600 sec) tak cache karega
 @alru_cache(maxsize=200, ttl=3600)
 async def fetch_yahoo_search(query: str):
     try:
+        # 1. Search API Call
         url = f"https://query1.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=10&newsCount=0"
         headers = { "User-Agent": "Mozilla/5.0" }
         res = requests.get(url, headers=headers, timeout=3)
         data = res.json()
+        
         suggestions = []
         if "quotes" in data:
-            for q in data["quotes"]:
-                # Sirf Indian Stocks (.NS / .BO) filter karein
-                if q.get("symbol", "").endswith((".NS", ".BO")):
-                    suggestions.append({
-                        "symbol": q.get("symbol"), 
-                        "name": q.get("longname"), 
-                        "type": q.get("quoteType")
-                    })
+            # 2. Filter Indian Stocks (.NS / .BO)
+            # Sirf Top 5 results lenge taaki Price fetch fast ho
+            filtered_quotes = [
+                q for q in data["quotes"] 
+                if q.get("symbol", "").endswith((".NS", ".BO"))
+            ][:5]
+
+            # 3. Get Prices for these symbols
+            if filtered_quotes:
+                symbols = [q["symbol"] for q in filtered_quotes]
+                
+                # Bulk fetch current prices (Optimization)
+                try:
+                    # 'period=1d' latest data lata hai
+                    price_data = yf.download(symbols, period="1d", progress=False, auto_adjust=True)
+                    
+                    for q in filtered_quotes:
+                        sym = q.get("symbol")
+                        price = 0.0
+                        
+                        try:
+                            # Handle different dataframe structures (Single vs Multi-symbol)
+                            if len(symbols) == 1:
+                                if not price_data.empty:
+                                    price = float(price_data["Close"].iloc[-1])
+                            else:
+                                # Multi-index columns handling
+                                if sym in price_data["Close"].columns:
+                                    price = float(price_data["Close"][sym].iloc[-1])
+                        except:
+                            price = 0.0
+
+                        suggestions.append({
+                            "symbol": sym,
+                            "name": q.get("longname") or q.get("shortname"), # Name fallback
+                            "current_price": round(price, 2) # ✅ Added Price here
+                        })
+                except Exception as e:
+                    print(f"Price Fetch Error: {e}")
+                    # Agar price fail ho jaye, to bina price ke return karo
+                    for q in filtered_quotes:
+                        suggestions.append({
+                            "symbol": q.get("symbol"),
+                            "name": q.get("longname"),
+                            "current_price": 0.0
+                        })
+
         return suggestions
-    except: return []
+    except Exception as e:
+        print(f"Search Error: {e}")
+        return []
 
 # ==========================================
 # 2. API ROUTES
@@ -42,18 +84,16 @@ async def fetch_yahoo_search(query: str):
 @router.get("/indices")
 async def get_market_indices():
     try:
-        # 'auto_adjust=True' warning fix karne ke liye hai
         nifty_data = yf.download("^NSEI", period="1d", auto_adjust=True, progress=False)
         sensex_data = yf.download("^BSESN", period="1d", auto_adjust=True, progress=False)
         
-        # Data Flattening (Multi-index handling)
+        # Data Flattening
         if not nifty_data.empty and isinstance(nifty_data.columns, pd.MultiIndex):
             nifty_data.columns = nifty_data.columns.get_level_values(0)
         
         if not sensex_data.empty and isinstance(sensex_data.columns, pd.MultiIndex):
             sensex_data.columns = sensex_data.columns.get_level_values(0)
 
-        # Last closing price nikalna
         nifty = round(float(nifty_data["Close"].iloc[-1]), 2) if not nifty_data.empty else 0.0
         sensex = round(float(sensex_data["Close"].iloc[-1]), 2) if not sensex_data.empty else 0.0
         
@@ -65,7 +105,6 @@ async def get_market_indices():
 # --- Search Stock Route ---
 @router.get("/search-stock")
 async def search_stock(query: str):
-    # Cached helper function call kar rahe hain
     return await fetch_yahoo_search(query)
 
 # --- Graph Data (History) ---
@@ -73,16 +112,13 @@ async def search_stock(query: str):
 async def get_stock_history(symbol: str):
     try:
         clean_sym = symbol.upper().replace(".NS", "").replace(".BO", "")
-        # Pehle NSE try karo, fir BSE
         tickers_to_try = [f"{clean_sym}.NS", f"{clean_sym}.BO"]
         
         for ticker_name in tickers_to_try:
             try:
-                # 1 Month ka data, daily candle
                 data = yf.download(ticker_name, period="1mo", interval="1d", auto_adjust=True, progress=False)
                 
                 if not data.empty:
-                    # Flatten logic
                     if isinstance(data.columns, pd.MultiIndex):
                         data.columns = data.columns.get_level_values(0)
                     
@@ -91,11 +127,8 @@ async def get_stock_history(symbol: str):
                     
                     for _, row in data.iterrows():
                         try:
-                            # Date formatting: "12 Dec"
                             date_val = row['Date'].strftime("%d %b")
                             close_val = row['Close']
-                            
-                            # Float conversion safe logic
                             price_val = float(close_val.iloc[0]) if hasattr(close_val, 'iloc') else float(close_val)
                             
                             if price_val > 0:
@@ -110,14 +143,11 @@ async def get_stock_history(symbol: str):
 # --- AI Analysis Route ---
 @router.get("/analyze-stock/{symbol}")
 async def analyze_stock(symbol: str):
-    # 'await' zaroori hai kyunki service ab async hai
     current_price = await get_live_price(symbol)
     
     if not current_price:
         return {"analysis": "Could not fetch stock price. Please try again."}
     
-    # 1 Month Change nikalne ka logic (Simple Approximation)
-    # Real production app mein hum history se calculate karte hain
     change_pct = "N/A" 
     
     return {"analysis": ai_engine.analyze(symbol, current_price, change_pct, "Yahoo Finance")}
