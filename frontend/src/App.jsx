@@ -9,7 +9,8 @@ import MobileMenu from './components/layout/MobileMenu'
 import AlertForm from './components/dashboard/AlertForm'
 import AlertList from './components/dashboard/AlertList'
 import NewsFeed from './components/news/NewsFeed'
-import Portfolio from './components/dashboard/Portfolio' // ✅ NEW IMPORT
+import Portfolio from './components/dashboard/Portfolio'
+import AdminDashboard from './components/admin/AdminDashboard' 
 
 // --- Modals ---
 import ChartModal from './components/modals/ChartModal'
@@ -26,6 +27,10 @@ import { MenuIcon } from './components/common/Icons'
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'))
   
+  // User & Role State
+  const [userEmail, setUserEmail] = useState('')
+  const [userRole, setUserRole] = useState('user') // Default Role
+
   // Dashboard States
   const [form, setForm] = useState({ symbol: '', target: '' })
   const [alerts, setAlerts] = useState([])
@@ -37,7 +42,6 @@ function App() {
   const [isInitialLoading, setIsInitialLoading] = useState(true)
   
   // UI States
-  // activeView options: 'dashboard', 'portfolio', 'news'
   const [activeView, setActiveView] = useState('dashboard') 
   const [generalNews, setGeneralNews] = useState([])
   const [isNewsLoading, setIsNewsLoading] = useState(false)
@@ -47,7 +51,6 @@ function App() {
   const [chartData, setChartData] = useState([])
   const [isChartLoading, setIsChartLoading] = useState(false)
   const [selectedStock, setSelectedStock] = useState(null)
-  const [userEmail, setUserEmail] = useState('')
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   
   // AI Analysis States
@@ -64,7 +67,13 @@ function App() {
   const theme = getThemeStyles(isDarkMode);
 
   // --- Effects ---
-  const logout = () => { localStorage.removeItem('token'); setToken(null); toast.success('See you soon!') }
+  const logout = () => { 
+      localStorage.removeItem('token'); 
+      setToken(null); 
+      setUserEmail('');
+      setUserRole('user');
+      toast.success('See you soon!');
+  }
   
   const toggleTheme = () => setIsDarkMode(!isDarkMode)
 
@@ -72,17 +81,35 @@ function App() {
     localStorage.setItem('stockTheme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
+  // ✅ Fetch User Profile & Role (Centralized)
+  const fetchUserProfile = async () => {
+    if (!token) return;
+    try {
+        const res = await axios.get(`${API_URL}/auth/getuser`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        setUserEmail(res.data.email);
+        setUserRole(res.data.role || 'user'); 
+    } catch (error) {
+        console.error("Profile fetch failed", error);
+        // Agar token invalid hai to logout karo
+        if (error.response && error.response.status === 401) {
+            logout();
+        }
+    }
+  }
+
   const fetchAlerts = async (isBackground = false) => {
     if (!token) return;
     if (!isBackground) setIsInitialLoading(true);
     try {
       const res = await axios.get(`${API_URL}/alerts`, { headers: { Authorization: `Bearer ${token}` } })
       setAlerts(res.data)
-      if(res.data.length > 0 && res.data[0].email) {
-        setUserEmail(res.data[0].email)
-      }
-    } catch (error) { if(error.response?.status === 401) logout(); }
-    finally { if (!isBackground) setIsInitialLoading(false); }
+    } catch (error) { 
+        if(error.response?.status === 401) logout(); 
+    } finally { 
+        if (!isBackground) setIsInitialLoading(false); 
+    }
   }
 
   const fetchIndices = async () => {
@@ -100,11 +127,19 @@ function App() {
     setIsNewsLoading(false);
   }
 
+  // ✅ Initial Data Load
   useEffect(() => {
     if (token) {
-        fetchAlerts(); fetchIndices();
-        const interval = setInterval(() => { fetchAlerts(true); fetchIndices(); }, 5000)
-        return () => clearInterval(interval)
+        fetchUserProfile(); // Sabse pehle user info lao
+        fetchAlerts(); 
+        fetchIndices();
+        
+        const interval = setInterval(() => { 
+            fetchAlerts(true); 
+            fetchIndices(); 
+        }, 5000);
+        
+        return () => clearInterval(interval);
     }
   }, [token])
 
@@ -114,6 +149,7 @@ function App() {
       }
   }, [activeView])
   
+  // Search Logic
   useEffect(() => {
     const delay = setTimeout(async () => {
       if (form.symbol.length > 1) {
@@ -207,6 +243,8 @@ function App() {
         setActiveView={setActiveView}
         toggleTheme={toggleTheme}
         logout={logout}
+        token={token}
+        userRole={userRole} // ✅ Props Passed
       />
 
       <div className="flex h-screen overflow-hidden">
@@ -223,6 +261,8 @@ function App() {
           toggleTheme={toggleTheme}
           indices={indices}
           getAvatarLetter={getAvatarLetter}
+          token={token}
+          userRole={userRole} // ✅ Props Passed
         />
 
         <main className={`flex-1 overflow-y-auto relative transition-colors duration-300 ${theme.bg}`}>
@@ -238,10 +278,10 @@ function App() {
                 
                 {/* ✅ View Switching Logic */}
                 {activeView === 'portfolio' ? (
-                    // 1. Portfolio View
                     <Portfolio token={token} isDarkMode={isDarkMode} />
+                ) : activeView === 'admin' ? ( 
+                    <AdminDashboard token={token} isDarkMode={isDarkMode} />
                 ) : activeView === 'dashboard' ? (
-                    // 2. Dashboard View
                     <>
                          <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
                             {[
@@ -272,7 +312,6 @@ function App() {
                         />
                     </>
                 ) : (
-                    // 3. News View
                     <NewsFeed 
                         generalNews={generalNews}
                         isNewsLoading={isNewsLoading}
@@ -296,6 +335,7 @@ function App() {
         isProfileOpen={isProfileOpen} setIsProfileOpen={setIsProfileOpen}
         userEmail={userEmail} getAvatarLetter={getAvatarLetter}
         logout={logout} theme={theme} isDarkMode={isDarkMode}
+        token={token}
       />
 
       <AiModal 
