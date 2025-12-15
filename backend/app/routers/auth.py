@@ -1,5 +1,3 @@
-# File: app/routers/auth.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -15,9 +13,8 @@ from app.core.config import settings
 router = APIRouter()
 
 # ==========================================
-# 🔐 SECURITY HELPERS (Added for Dependency)
+# 🔐 SECURITY HELPERS
 # ==========================================
-# Token URL wahi hona chahiye jo Login route ka hai
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -27,7 +24,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # Token Decode
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
@@ -35,7 +31,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     
-    # User Find (Using Beanie Syntax)
+    # User Find
     user = await User.find_one(User.email == email)
     if user is None:
         raise credentials_exception
@@ -59,9 +55,11 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
     new_user = User(
         email=user_data.email, 
         hashed_password=hashed_pass,
+        name=user_data.name, # ✅ Name bhi save karein
         is_verified=False,
         verification_token=token,
-        role="user" # Default role add kiya hai
+        role="user",
+        is_active=True # Default Active
     )
     await new_user.create()
     
@@ -77,15 +75,23 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await User.find_one(User.email == form_data.username)
     
-    # Verify User & Password
+    # 1. Verify User & Password
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     
-    # Check if Email is Verified
+    # 2. 🔥 NEW: Check Ban Status
+    # Agar 'is_active' False hai, to login block karein
+    if getattr(user, "is_active", True) is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="🚫 Your account has been suspended. Contact Admin."
+        )
+
+    # 3. Check if Email is Verified
     if not user.is_verified:
         raise HTTPException(status_code=403, detail="Email not verified.")
     
-    # Generate JWT Token
+    # 4. Generate JWT Token
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -109,14 +115,13 @@ async def verify_email(token: str):
     return RedirectResponse(url=f"{settings.FRONTEND_URL}?verified=true")
 
 # ==========================================
-# 4. GET USER PROFILE (✅ Added to Fix 404)
+# 4. GET USER PROFILE
 # ==========================================
 @router.get("/auth/getuser")
 async def get_user_profile(current_user: User = Depends(get_current_user)):
-    # Frontend ko Role aur Email chahiye
     return {
         "email": current_user.email,
-        # Agar name nahi hai to email ka first part bhej do
-        "name": current_user.email.split("@")[0], 
+        # Name DB se lein, agar nahi hai to email split karein
+        "name": current_user.name if current_user.name else current_user.email.split("@")[0], 
         "role": getattr(current_user, "role", "user") 
     }
