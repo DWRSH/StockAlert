@@ -9,8 +9,8 @@ import logging
 # Local Imports
 from app.core.config import settings
 from app.db.database import init_db
-# ✅ Added 'portfolio' to imports
-from app.routers import auth, stocks, alerts, chat, portfolio
+# ✅ Added 'admin' to imports
+from app.routers import auth, stocks, alerts, chat, portfolio, admin
 from app.services.background import track_stock_prices
 
 # Logging Setup
@@ -60,7 +60,8 @@ app.include_router(auth.router, tags=["Auth"])
 app.include_router(stocks.router, tags=["Stocks"])
 app.include_router(alerts.router, tags=["Alerts"])
 app.include_router(chat.router, tags=["AI Chat"])
-app.include_router(portfolio.router, tags=["Portfolio"]) # 👈 NEW: Portfolio Router Added
+app.include_router(portfolio.router, tags=["Portfolio"])
+app.include_router(admin.router, tags=["Admin"]) # 👈 NEW: Admin Router Added
 
 @app.get("/")
 def read_root():
