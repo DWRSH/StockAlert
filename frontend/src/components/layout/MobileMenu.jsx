@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// ✅ Added BriefcaseIcon import
-import { CloseIcon, DashboardIcon, NewsIcon, SunIcon, MoonIcon, LogOutIcon, BriefcaseIcon } from '../common/Icons';
+import { CloseIcon, DashboardIcon, NewsIcon, SunIcon, MoonIcon, LogOutIcon, BriefcaseIcon, UserIcon } from '../common/Icons';
 import MarketStatusCard from '../dashboard/MarketStatusCard';
 
 export default function MobileMenu({ 
@@ -16,10 +15,15 @@ export default function MobileMenu({
     activeView, 
     setActiveView, 
     toggleTheme, 
-    logout 
+    logout,
+    userRole // ✅ Receive User Role from App.js
 }) {
+    // 🚀 Optimization: Removed internal axios call.
+    // Now relying completely on props passed from App.js
 
-    // 🏎️ Physics-based Animation Variants for "Smooth" feel
+    const displayEmail = userEmail || 'User';
+
+    // Animation Variants
     const sidebarVariants = {
         closed: { x: "-100%", opacity: 0, transition: { type: "spring", stiffness: 300, damping: 35 } },
         open: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 30 } }
@@ -30,7 +34,6 @@ export default function MobileMenu({
         open: { opacity: 1 }
     };
 
-    // Helper Component for Menu Items
     const MenuItem = ({ icon, label, id, onClick }) => (
         <button
             onClick={onClick}
@@ -49,22 +52,16 @@ export default function MobileMenu({
         <AnimatePresence>
             {isMobileMenuOpen && (
                 <>
-                    {/* 🌑 DARK BACKDROP (Overlay with Blur) */}
+                    {/* 🌑 DARK BACKDROP */}
                     <motion.div
-                        initial="closed"
-                        animate="open"
-                        exit="closed"
-                        variants={overlayVariants}
+                        initial="closed" animate="open" exit="closed" variants={overlayVariants}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
                     />
 
                     {/* 📱 SIDEBAR DRAWER */}
                     <motion.div
-                        initial="closed"
-                        animate="open"
-                        exit="closed"
-                        variants={sidebarVariants}
+                        initial="closed" animate="open" exit="closed" variants={sidebarVariants}
                         className={`fixed top-0 left-0 bottom-0 w-[85%] max-w-xs z-50 shadow-2xl flex flex-col md:hidden border-r ${
                             isDarkMode ? 'bg-[#0B0F19] border-slate-800' : 'bg-white border-slate-200'
                         }`}
@@ -95,7 +92,7 @@ export default function MobileMenu({
                                 </div>
                                 <div className="overflow-hidden">
                                     <p className={`text-sm font-bold truncate ${theme.heading}`}>My Profile</p>
-                                    <p className="text-xs opacity-50 truncate max-w-[140px]">{userEmail || 'User'}</p>
+                                    <p className="text-xs opacity-50 truncate max-w-[140px]">{displayEmail}</p>
                                 </div>
                             </div>
 
@@ -115,7 +112,6 @@ export default function MobileMenu({
                                     onClick={() => { setActiveView('dashboard'); setIsMobileMenuOpen(false); }} 
                                 />
                                 
-                                {/* ✅ NEW: Portfolio Item */}
                                 <MenuItem 
                                     id="portfolio" 
                                     label="Portfolio" 
@@ -129,6 +125,20 @@ export default function MobileMenu({
                                     icon={<NewsIcon />} 
                                     onClick={() => { setActiveView('news'); setIsMobileMenuOpen(false); }} 
                                 />
+
+                                {/* ✅ ADMIN LINK (Visible only to Admins) */}
+                                {userRole === 'admin' && (
+                                    <>
+                                        <div className={`h-px my-3 mx-2 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}></div>
+                                        <p className="text-[10px] uppercase font-bold text-indigo-500 mb-2 px-1">Admin Tools</p>
+                                        <MenuItem 
+                                            id="admin" 
+                                            label="Admin Panel" 
+                                            icon={<UserIcon />} 
+                                            onClick={() => { setActiveView('admin'); setIsMobileMenuOpen(false); }} 
+                                        />
+                                    </>
+                                )}
                             </div>
 
                             {/* Theme Toggle */}
