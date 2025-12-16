@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'react-hot-toast';
 
 // --- API URL SETUP (.env se value lega) ---
+// Note: Agar aap Create React App use kar rahe hain to 'import.meta.env.VITE_API_URL' ki jagah 'process.env.REACT_APP_API_URL' likhein.
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // --- INLINE ICONS ---
@@ -18,7 +19,7 @@ const SearchIcon = ({ className }) => (
     </svg>
 );
 
-// --- HELPER FUNCTION FOR FORMATTING ---
+// --- HELPER FUNCTION FOR FORMATTING (2 Decimal Places) ---
 const formatPrice = (price) => {
     if (typeof price !== 'number' || isNaN(price)) return 'N/A';
     return price.toFixed(2);
@@ -28,7 +29,7 @@ export default function Portfolio({ token, isDarkMode }) {
     const [holdings, setHoldings] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // --- NEW STATE FOR SEARCH ---
+    // --- STATE FOR HOLDINGS SEARCH ---
     const [searchTerm, setSearchTerm] = useState('');
 
     // UI State
@@ -70,7 +71,7 @@ export default function Portfolio({ token, isDarkMode }) {
 
             const interval = setInterval(() => {
                 fetchPortfolio(true); 
-            }, 5000);
+            }, 5000); // Har 5 second mein refresh
 
             return () => clearInterval(interval);
         }
@@ -133,11 +134,16 @@ export default function Portfolio({ token, isDarkMode }) {
     const totalPnL = currentValue - totalInvested;
     const pnlPercentage = totalInvested > 0 ? ((totalPnL / totalInvested) * 100).toFixed(2) : 0;
 
-    // --- FILTERED HOLDINGS LOGIC ---
-    const filteredHoldings = holdings.filter(h => 
-        h.symbol.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        h.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // --- FILTERED HOLDINGS LOGIC (FIXED) ---
+    const filteredHoldings = holdings.filter(h => {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        
+        // Safety check using Optional Chaining (?) and fallback to empty string if undefined
+        const symbolMatch = (h.symbol || '').toLowerCase().includes(lowerSearchTerm);
+        const nameMatch = (h.name || '').toLowerCase().includes(lowerSearchTerm);
+        
+        return symbolMatch || nameMatch;
+    });
 
     if (loading) return <PortfolioSkeleton isDarkMode={isDarkMode} />;
 
