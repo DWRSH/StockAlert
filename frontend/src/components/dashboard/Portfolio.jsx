@@ -27,44 +27,53 @@ export default function Portfolio({ token, isDarkMode }) {
     const [holdings, setHoldings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // UI State
     const [showBottomSheet, setShowBottomSheet] = useState(false);
     const [txn, setTxn] = useState({ symbol: '', quantity: '', price: '', type: 'BUY' });
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // Ref to prevent duplicate name fetching
+    // Ref to prevent multiple simultaneous name fetches
     const fetchingNamesRef = useRef(false);
 
     const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
 
-    // --- 1. SMART FETCH PORTFOLIO (WITH MERGE LOGIC) ---
+    // --- 1. SMART FETCH PORTFOLIO (The Logic) ---
     const fetchPortfolio = async (isBackground = false) => {
         if (!isBackground) setLoading(true); 
+        
         try {
             const res = await axios.get(`${API_URL}/portfolio`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            const rawData = Array.isArray(res.data) ? res.data : (res.data.holdings || []);
+            // Backend se jo data aaya (isme shayad name missing ho)
+            const newData = Array.isArray(res.data) ? res.data : (res.data.holdings || []);
 
-            // --- CRITICAL FIX: Merge new price data with existing names ---
             setHoldings(prevHoldings => {
-                const mergedData = rawData.map(newItem => {
+                // Hum naye data ko map karenge, lekin purane data se NAAM copy kar lenge
+                const mergedData = newData.map(newItem => {
+                    // Kya ye stock pehle se hamare paas tha?
                     const existingItem = prevHoldings.find(p => p.symbol === newItem.symbol);
                     
-                    // If backend sends empty name, try to use the one we already have in state
-                    let smartName = newItem.name;
-                    if ((!smartName || smartName === 'N/A') && existingItem && existingItem.name && existingItem.name !== 'N/A' && existingItem.name !== 'Loading...') {
-                        smartName = existingItem.name;
+                    let finalName = newItem.name;
+
+                    // Agar naye data me naam missing/kharaab hai, to purana naam use karo
+                    if (!finalName || finalName === 'N/A' || finalName === newItem.symbol) {
+                        if (existingItem && existingItem.name && existingItem.name !== 'N/A' && existingItem.name !== existingItem.symbol) {
+                            finalName = existingItem.name;
+                        }
                     }
 
                     return {
                         ...newItem,
-                        name: smartName // Use preserved name
+                        name: finalName // Yahan humne naam bachaya
                     };
                 });
 
-                // Trigger name fetch for any remaining missing names
+                // Ab check karo kiska naam abhi bhi missing hai, aur use fetch karo
+                // (Lekin background refresh me bar bar fetch mat karo agar naam already hai)
                 fetchMissingNames(mergedData);
                 
                 return mergedData;
@@ -77,37 +86,50 @@ export default function Portfolio({ token, isDarkMode }) {
         }
     };
 
-    // --- 2. SMART NAME FETCHER ---
+    // --- 2. FETCH MISSING NAMES (From Search API) ---
     const fetchMissingNames = async (currentHoldings) => {
         if (fetchingNamesRef.current) return;
 
-        const stocksMissingNames = currentHoldings.filter(h => !h.name || h.name === 'N/A' || h.name === 'Loading...');
+        // Sirf wo stocks nikalo jinka naam Symbol jaisa hai ya missing hai
+        const stocksToFetch = currentHoldings.filter(h => 
+            !h.name || h.name === 'N/A' || h.name === h.symbol || h.name === 'Loading...'
+        );
 
-        if (stocksMissingNames.length === 0) return;
+        if (stocksToFetch.length === 0) return;
 
         fetchingNamesRef.current = true;
-        let newHoldingsState = [...currentHoldings];
-        let hasUpdates = false;
+        
+        // Hum state ko directly modify nahi kar sakte, isliye hum updates collect karenge
+        // aur aakhri me ek saath update karenge
+        let updatesFound = false;
+        
+        // NOTE: Hum naya array banayenge based on current state inside loop to be safe, 
+        // but simpler is to fetch all first then update.
+        
+        const nameMap = {}; // Symbol -> Name mapping
 
-        for (const stock of stocksMissingNames) {
+        await Promise.all(stocksToFetch.map(async (stock) => {
             try {
                 const res = await axios.get(`${API_URL}/search-stock?query=${stock.symbol}`);
                 if (res.data && res.data.length > 0) {
                     const match = res.data.find(s => s.symbol === stock.symbol);
-                    if (match && match.name) {
-                        newHoldingsState = newHoldingsState.map(h => 
-                            h.symbol === stock.symbol ? { ...h, name: match.name } : h
-                        );
-                        hasUpdates = true;
+                    if (match && match.name && match.name !== match.symbol) {
+                        nameMap[stock.symbol] = match.name;
+                        updatesFound = true;
                     }
                 }
             } catch (err) {
-                console.error(`Name fetch failed for ${stock.symbol}`);
+                console.error(`Failed to fetch name for ${stock.symbol}`);
             }
-        }
+        }));
 
-        if (hasUpdates) {
-            setHoldings(newHoldingsState);
+        if (updatesFound) {
+            setHoldings(prev => prev.map(h => {
+                if (nameMap[h.symbol]) {
+                    return { ...h, name: nameMap[h.symbol] };
+                }
+                return h;
+            }));
         }
         
         fetchingNamesRef.current = false;
@@ -157,6 +179,7 @@ export default function Portfolio({ token, isDarkMode }) {
             toast.success("Saved!", { id: tId, position: 'bottom-right' }); 
             setShowBottomSheet(false);
             setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' });
+            // Fetch immediately to update list
             fetchPortfolio(false); 
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed", { id: tId, position: 'bottom-right' });
@@ -176,8 +199,12 @@ export default function Portfolio({ token, isDarkMode }) {
     const filteredHoldings = holdings.filter(h => {
         if (!h) return false; 
         const lowerSearchTerm = searchTerm.toLowerCase();
+        
+        // Search by Symbol OR Name
         const symbolMatch = (h.symbol || '').toLowerCase().includes(lowerSearchTerm);
-        const nameMatch = (h.name || '').toLowerCase().includes(lowerSearchTerm);
+        const nameToSearch = h.name && h.name !== 'N/A' ? h.name : '';
+        const nameMatch = nameToSearch.toLowerCase().includes(lowerSearchTerm);
+        
         return symbolMatch || nameMatch;
     });
 
@@ -282,7 +309,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                             <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-[#0B0F19] border-slate-700' : 'bg-white border-slate-200'}`}>
                                                 {suggestions.map((s, idx) => (
                                                     <div key={idx} onClick={() => selectStock(s)} className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}>
-                                                        {/* --- DESKTOP QUICK TRADE SUGGESTION EXPLICIT STRUCTURE --- */}
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                             <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.name || 'N/A'}</span>
@@ -326,7 +352,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                         <div className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-48 overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
                                             {suggestions.map((s, idx) => (
                                                 <div key={idx} onClick={() => selectStock(s)} className="px-4 py-3 cursor-pointer flex justify-between items-center border-b dark:border-slate-700 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-900">
-                                                    {/* --- MOBILE SUGGESTION EXPLICIT STRUCTURE --- */}
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                         <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.name || 'N/A'}</span>
@@ -364,8 +389,11 @@ function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
     const pnl = totalVal - invested;
     const pnlPercentage = invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0;
     
-    // Use stored name or "Loading..." (never N/A for display in table)
-    const displayName = (h.name && h.name !== 'N/A') ? h.name : 'Loading...';
+    // Display Logic for Name in Table:
+    // 1. If name exists and is valid -> show Name
+    // 2. If name is missing but symbol exists -> show "Loading..."
+    // 3. Fallback -> N/A
+    const displayName = (h.name && h.name !== 'N/A' && h.name !== h.symbol) ? h.name : (h.symbol ? 'Loading Name...' : 'N/A');
 
     return (
         <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
@@ -399,7 +427,9 @@ function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
     const invested = h.quantity * h.avg_price;
     const pnl = totalVal - invested;
     const pnlPercentage = invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0;
-    const displayName = (h.name && h.name !== 'N/A') ? h.name : 'Loading...';
+    
+    // Consistent Display Logic
+    const displayName = (h.name && h.name !== 'N/A' && h.name !== h.symbol) ? h.name : (h.symbol ? 'Loading Name...' : 'N/A');
 
     return (
         <div className={`p-4 rounded-2xl border flex flex-col gap-3 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}>
