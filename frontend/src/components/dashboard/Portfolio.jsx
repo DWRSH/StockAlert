@@ -130,12 +130,12 @@ export default function Portfolio({ token, isDarkMode }) {
     if (loading) return <PortfolioSkeleton isDarkMode={isDarkMode} />;
 
     return (
-        // BG-TRANSPARENT to blend with main app
+        // BG-TRANSPARENT
         <div className={`min-h-screen w-full font-sans bg-transparent ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
             <Toaster position="bottom-right" />
             
-            {/* --- HEADER --- */}
-            <div className={`w-full px-4 sm:px-6 lg:px-8 py-5 border-b sticky top-0 z-30 backdrop-blur-md ${isDarkMode ? 'border-slate-800 bg-slate-950/80' : 'border-slate-200 bg-white/80'}`}>
+            {/* --- HEADER (Non-Sticky, Transparent) --- */}
+            <div className={`w-full px-4 sm:px-6 lg:px-8 py-5 border-b bg-transparent ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <div className="max-w-7xl mx-auto flex flex-row items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Portfolio</h1>
@@ -155,7 +155,7 @@ export default function Portfolio({ token, isDarkMode }) {
                             <Icons.Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
                         </div>
 
-                        {/* Mobile Add Button (Moved to Side) */}
+                        {/* Mobile Add Button (Side) */}
                         <button 
                             onClick={() => setShowBottomSheet(true)} 
                             className="md:hidden flex items-center justify-center p-2 bg-indigo-600 text-white rounded-lg active:scale-95 transition-transform"
@@ -214,7 +214,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className={`text-xs uppercase font-bold tracking-wider ${isDarkMode ? 'bg-slate-950/50 text-slate-500' : 'bg-slate-50 text-slate-500'}`}>
                                         <tr>
-                                            {/* Reduced Padding to px-3 */}
                                             <th className="px-3 py-3 pl-5">Instrument</th>
                                             <th className="px-3 py-3 text-right">Qty</th>
                                             <th className="px-3 py-3 text-right">Avg</th>
