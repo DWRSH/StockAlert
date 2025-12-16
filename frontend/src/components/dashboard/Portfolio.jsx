@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Toaster, toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast'; // ✅ Removed 'Toaster' from import
 
 // --- API URL SETUP ---
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -132,7 +132,8 @@ export default function Portfolio({ token, isDarkMode }) {
     return (
         // BG-TRANSPARENT
         <div className={`min-h-screen w-full font-sans bg-transparent ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-            <Toaster position="bottom-right" />
+            
+            {/* ✅ REMOVED <Toaster /> FROM HERE */}
             
             {/* --- HEADER (Non-Sticky, Transparent) --- */}
             <div className={`w-full px-4 sm:px-6 lg:px-8 py-5 border-b bg-transparent ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
