@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Toaster, toast } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast'; // Toaster ko yahan se hata diya hai
 
 // --- API URL SETUP (.env se value lega) ---
-// Note: Agar aap Create React App use kar rahe hain to 'import.meta.env.VITE_API_URL' ki jagah 'process.env.REACT_APP_API_URL' likhein.
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // --- INLINE ICONS ---
@@ -17,7 +16,6 @@ const PlusIcon = ({ className }) => (
 // --- HELPER FUNCTION FOR FORMATTING ---
 const formatPrice = (price) => {
     if (typeof price !== 'number' || isNaN(price)) return 'N/A';
-    // Fix: Price ko 2 decimal places tak format karna
     return price.toFixed(2);
 }
 
@@ -37,7 +35,7 @@ export default function Portfolio({ token, isDarkMode }) {
 
     // --- REAL DATA FETCHING FUNCTION WITH BACKGROUND OPTION ---
     const fetchPortfolio = async (isBackground = false) => {
-        if (!isBackground) setLoading(true); // Sirf pehli baar loading screen dikhayenge
+        if (!isBackground) setLoading(true); 
         
         try {
             const res = await axios.get(`${API_URL}/portfolio`, {
@@ -60,15 +58,12 @@ export default function Portfolio({ token, isDarkMode }) {
     // --- POLLING LOGIC (Auto-Refresh) ---
     useEffect(() => { 
         if(token) {
-            // 1. Initial Fetch (Page Load par)
             fetchPortfolio(false); 
 
-            // 2. Polling setup: Har 5 second (5000ms) mein background mein refresh karo
             const interval = setInterval(() => {
                 fetchPortfolio(true); 
             }, 5000);
 
-            // Cleanup function: Component unmount hone par interval stop karo
             return () => clearInterval(interval);
         }
     }, [token]);
@@ -79,7 +74,6 @@ export default function Portfolio({ token, isDarkMode }) {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
                 try {
-                    // Search URL bhi API_URL se banao
                     const res = await axios.get(`${API_URL}/search-stock?query=${txn.symbol}`);
                     setSuggestions(res.data);
                 } catch (err) { console.error("Search failed"); }
@@ -93,10 +87,10 @@ export default function Portfolio({ token, isDarkMode }) {
     const handleTransaction = async (e) => {
         e.preventDefault();
         if (!txn.symbol || txn.quantity <= 0 || txn.price <= 0) {
-            toast.error("Invalid Input");
+            toast.error("Invalid Input", { duration: 3000, position: 'bottom-right' }); // Position set ki
             return;
         }
-        const tId = toast.loading("Processing...");
+        const tId = toast.loading("Processing...", { position: 'bottom-right' }); // Position set ki
         const payload = {
             symbol: txn.symbol.toUpperCase(),
             quantity: Number(txn.quantity),
@@ -107,12 +101,13 @@ export default function Portfolio({ token, isDarkMode }) {
             await axios.post(`${API_URL}/portfolio/transaction`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            toast.success("Saved!", { id: tId });
+            // Duration default 4000ms hoti hai. Custom duration set nahi ki to 4s baad chali jayegi.
+            toast.success("Saved!", { id: tId, position: 'bottom-right' }); 
             setShowBottomSheet(false);
             setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' });
-            fetchPortfolio(false); // New transaction ke baad turant data fetch karo
+            fetchPortfolio(false); 
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed", { id: tId });
+            toast.error(error.response?.data?.message || "Failed", { id: tId, position: 'bottom-right' });
         }
     };
 
@@ -127,7 +122,6 @@ export default function Portfolio({ token, isDarkMode }) {
 
     // Calculations
     const totalInvested = holdings.reduce((acc, curr) => acc + (curr.quantity * curr.avg_price), 0);
-    // current_price ko formatPrice use karne se pehle number hona chahiye
     const currentValue = holdings.reduce((acc, curr) => acc + (curr.quantity * (curr.current_price || curr.avg_price)), 0); 
     const totalPnL = currentValue - totalInvested;
     const pnlPercentage = totalInvested > 0 ? ((totalPnL / totalInvested) * 100).toFixed(2) : 0;
@@ -136,7 +130,12 @@ export default function Portfolio({ token, isDarkMode }) {
 
     return (
         <div className={`min-h-screen pb-20 md:pb-10 ${isDarkMode ? 'bg-[#0B0F19]' : 'bg-slate-50'}`}>
-            <Toaster position="top-center" />
+            
+            {/* --- FIX: TOASTER REMOVED FROM HERE ---
+               Toaster component ko yahan se hata diya gaya hai. 
+               Ab ye maan kar chala ja raha hai ki ye aapki App.js ya Layout.js file mein ek baar lagaya gaya hai.
+               Example: <Toaster position="bottom-right" /> 
+            */}
 
             {/* MOBILE HEADER */}
             <div className="md:hidden relative px-5 pt-6 pb-4 flex justify-between items-start">
@@ -165,7 +164,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-[40px] -mr-5 -mt-5"></div>
                                 <div className="relative z-10">
                                     <span className="text-xs font-bold uppercase tracking-widest text-white/80 mb-1 block">Net Worth</span>
-                                    {/* Net Worth value ko format karna */}
                                     <h1 className="text-4xl font-black tracking-tight text-white mb-2">
                                         ₹{formatPrice(currentValue)}
                                     </h1>
@@ -203,7 +201,7 @@ export default function Portfolio({ token, isDarkMode }) {
                         </div>
 
                         {/* 2. HOLDINGS TABLE */}
-                        <div className={`rounded-[1.5rem] border overflow-hidden min-h-[400px] flex flex-col ${isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50'}`}>
+                        <div className className={`rounded-[1.5rem] border overflow-hidden min-h-[400px] flex flex-col ${isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50'}`}>
                             <div className={`p-6 border-b flex justify-between items-center ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
                                 <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Holdings ({holdings.length})</h3>
                                 <div className="hidden md:flex gap-2">
@@ -227,7 +225,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                         {holdings.length === 0 ? (
                                             <tr><td colSpan="5" className="p-12 text-center opacity-40">No positions found.</td></tr>
                                         ) : (
-                                            // DesktopRow mein formatPrice use kiya gaya hai
                                             holdings.map((h, i) => <DesktopRow key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)
                                         )}
                                     </tbody>
@@ -237,7 +234,6 @@ export default function Portfolio({ token, isDarkMode }) {
                             {/* Mobile List */}
                             <div className="md:hidden flex flex-col p-2 gap-2">
                                 {holdings.length === 0 && <p className="text-center p-8 opacity-40">No positions found.</p>}
-                                {/* MobileCard mein formatPrice use kiya gaya hai */}
                                 {holdings.map((h, i) => <MobileCard key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)}
                             </div>
                         </div>
@@ -346,7 +342,7 @@ export default function Portfolio({ token, isDarkMode }) {
     );
 }
 
-// --- SUB COMPONENTS (formatPrice prop receive kar rahe hain) ---
+// --- SUB COMPONENTS ---
 
 function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
     const ltp = h.current_price || h.avg_price || 0;
