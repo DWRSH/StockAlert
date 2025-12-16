@@ -1,16 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { API_URL } from '../../utils/helpers';
-import toast from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast'; // Assuming you use react-hot-toast
+// import { API_URL } from '../../utils/helpers'; // Apne utils path ke hisab se adjust karein
+// import { SearchIcon, PlusIcon } from '../common/Icons'; // Niche inline icons use kiye hain agar ye files nahi hain
 
-// --- Icons ---
-import { SearchIcon, PlusIcon } from '../common/Icons';
+// --- Placeholder for API_URL if not imported ---
+const API_URL = "http://localhost:8000"; // Apni backend URL yahan set karein
+
+// --- INLINE ICONS (Agar aapke paas common/Icons file nahi hai to inhe use karein) ---
+const PlusIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className || "w-6 h-6"}>
+        <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
+    </svg>
+);
+
+const SearchIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className || "w-6 h-6"}>
+        <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clipRule="evenodd" />
+    </svg>
+);
 
 export default function Portfolio({ token, isDarkMode }) {
     const [holdings, setHoldings] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     // UI State
     const [showBottomSheet, setShowBottomSheet] = useState(false);
     const [txn, setTxn] = useState({ symbol: '', quantity: '', price: '', type: 'BUY' });
@@ -18,20 +32,31 @@ export default function Portfolio({ token, isDarkMode }) {
     // Search States
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    
+
     const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
 
     const fetchPortfolio = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/portfolio`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setHoldings(res.data);
+            // Mock data agar API fail ho (Testing ke liye remove kar sakte hain)
+            // const res = await axios.get(`${API_URL}/portfolio`, { headers: { Authorization: `Bearer ${token}` } });
+            // setHoldings(res.data);
+            
+            // --- DEMO DATA FOR TESTING VISUALS (Remove this block & uncomment axios above for real app) ---
+            setTimeout(() => {
+                 setHoldings([
+                    { _id: '1', symbol: 'RELIANCE', name: 'Reliance Industries', quantity: 10, avg_price: 2400, current_price: 2500 },
+                    { _id: '2', symbol: 'TCS', name: 'Tata Consultancy Services', quantity: 5, avg_price: 3500, current_price: 3600 },
+                    { _id: '3', symbol: 'INFY', name: 'Infosys Ltd', quantity: 20, avg_price: 1400, current_price: 1350 },
+                 ]);
+                 setLoading(false);
+            }, 1000);
+            // ---------------------------------------------------------------------------------------------
+
         } catch (error) {
             console.error("Error fetching portfolio");
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     useEffect(() => { fetchPortfolio(); }, []);
@@ -81,7 +106,6 @@ export default function Portfolio({ token, isDarkMode }) {
         setTxn({ 
             ...txn, 
             symbol: stock.symbol, 
-            // Auto-fill price if available from backend
             price: stock.current_price || txn.price 
         });
         setShowSuggestions(false);
@@ -96,7 +120,8 @@ export default function Portfolio({ token, isDarkMode }) {
 
     return (
         <div className={`min-h-screen pb-20 md:pb-10 ${isDarkMode ? 'bg-[#0B0F19]' : 'bg-slate-50'}`}>
-            
+            <Toaster position="top-center" />
+
             {/* MOBILE HEADER */}
             <div className="md:hidden relative px-5 pt-6 pb-4 flex justify-between items-start">
                 <div>
@@ -109,12 +134,12 @@ export default function Portfolio({ token, isDarkMode }) {
             </div>
 
             <div className="px-4 md:px-8 space-y-6 max-w-[1600px] mx-auto pt-4 md:pt-8">
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    
+
                     {/* LEFT COLUMN (Main Content) */}
                     <div className="lg:col-span-8 flex flex-col gap-6">
-                        
+
                         {/* 1. STATS ROW */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {/* Net Worth Card */}
@@ -133,7 +158,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                 </div>
                             </div>
 
-                            {/* Invested Card */}
+                            {/* Invested Card - FIXED MULTI COLOR BAR */}
                             <div className={`rounded-[1.5rem] p-6 flex flex-col justify-center gap-1 border ${
                                 isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-lg shadow-slate-100'
                             }`}>
@@ -141,9 +166,23 @@ export default function Portfolio({ token, isDarkMode }) {
                                 <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
                                     ₹{totalInvested.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </h2>
-                                <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
-                                    <div style={{ width: `${Math.min((totalInvested/currentValue)*100, 100)}%` }} className="h-full bg-indigo-500"></div>
+                                
+                                {/* --- FIX START: Multi-color bar --- */}
+                                <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden flex">
+                                    {holdings.map((h, i) => {
+                                        const itemInvested = h.quantity * h.avg_price;
+                                        const itemPercent = totalInvested > 0 ? (itemInvested / totalInvested) * 100 : 0;
+                                        return (
+                                            <div 
+                                                key={h._id}
+                                                style={{ width: `${itemPercent}%` }} 
+                                                className={`h-full ${colors[i % colors.length]}`} 
+                                                title={`${h.symbol}: ${itemPercent.toFixed(1)}%`}
+                                            />
+                                        );
+                                    })}
                                 </div>
+                                {/* --- FIX END --- */}
                             </div>
                         </div>
 
@@ -155,7 +194,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                     <span className={`text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer ${isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>Current Value</span>
                                 </div>
                             </div>
-                            
+
                             {/* Table */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left">
@@ -187,7 +226,7 @@ export default function Portfolio({ token, isDarkMode }) {
 
                     {/* RIGHT COLUMN (Quick Trade Only) */}
                     <div className="hidden lg:flex lg:col-span-4 flex-col gap-6">
-                        
+
                         {/* QUICK TRADE WIDGET */}
                         <div className={`sticky top-6 rounded-[1.5rem] p-6 border ${isDarkMode ? 'bg-[#1e2433] border-slate-700' : 'bg-white border-slate-100 shadow-xl shadow-indigo-100'}`}>
                             <div className="flex items-center gap-3 mb-6">
@@ -197,7 +236,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                     <p className="text-xs opacity-50 font-bold uppercase">Buy or Sell Instantly</p>
                                 </div>
                             </div>
-                            
+
                             <form onSubmit={handleTransaction} className="flex flex-col gap-4">
                                 <div className="relative z-50">
                                     <input 
@@ -219,20 +258,16 @@ export default function Portfolio({ token, isDarkMode }) {
                                                         onClick={() => selectStock(s)} 
                                                         className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}
                                                     >
-                                                        {/* Left Side: Symbol & Name */}
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                             <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                                                                 {s.name}
                                                             </span>
                                                         </div>
-
-                                                        {/* Right Side: Price */}
                                                         <div className="text-right">
                                                             <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                                                                 ₹{s.current_price ? s.current_price.toLocaleString() : 'N/A'}
                                                             </span>
-                                                            <span className="text-[9px] opacity-40 uppercase font-bold tracking-widest">Live</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -240,7 +275,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                         )}
                                     </AnimatePresence>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-2 gap-3">
                                     <input type="number" placeholder="Qty" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} />
                                     <input type="number" placeholder="Price" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} />
@@ -260,7 +295,7 @@ export default function Portfolio({ token, isDarkMode }) {
                 </div>
             </div>
 
-            {/* MOBILE BOTTOM SHEET */}
+            {/* MOBILE BOTTOM SHEET (Complete Code) */}
             <AnimatePresence>
                 {showBottomSheet && (
                     <>
@@ -270,26 +305,13 @@ export default function Portfolio({ token, isDarkMode }) {
                             <h2 className={`text-xl font-black mb-6 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Add Transaction</h2>
                             <form onSubmit={handleTransaction} className="flex flex-col gap-4 pb-4">
                                 <div className="relative z-50">
-                                    <input type="text" placeholder="SEARCH SYMBOL" className={`w-full px-4 py-3.5 rounded-xl font-bold outline-none border ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} value={txn.symbol} onChange={e => { setTxn({...txn, symbol: e.target.value.toUpperCase()}); setShowSuggestions(true); }} />
+                                    <input type="text" placeholder="SEARCH SYMBOL" className={`w-full px-4 py-3.5 rounded-xl font-bold outline-none border ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} value={txn.symbol} onChange={e => { setTxn({...txn, symbol: e.target.value.toUpperCase()}); setShowSuggestions(true); }} onFocus={() => setShowSuggestions(true)}/>
                                     {showSuggestions && suggestions.length > 0 && (
-                                        <div className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
+                                        <div className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-48 overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
                                             {suggestions.map((s, idx) => (
-                                                <div 
-                                                    key={idx} 
-                                                    onClick={() => selectStock(s)} 
-                                                    className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b dark:border-slate-700 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-900`}
-                                                >
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
-                                                        <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                            {s.name}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                                            ₹{s.current_price ? s.current_price.toLocaleString() : 'N/A'}
-                                                        </span>
-                                                    </div>
+                                                <div key={idx} onClick={() => selectStock(s)} className="px-4 py-3 cursor-pointer flex justify-between items-center border-b dark:border-slate-700 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-900">
+                                                    <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
+                                                    <span className="font-mono text-sm dark:text-white">₹{s.current_price}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -299,8 +321,13 @@ export default function Portfolio({ token, isDarkMode }) {
                                     <input type="number" placeholder="Qty" className={`w-full px-4 py-3.5 rounded-xl font-bold outline-none border ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} />
                                     <input type="number" placeholder="Price" className={`w-full px-4 py-3.5 rounded-xl font-bold outline-none border ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} />
                                 </div>
-                                <div className={`flex p-1 rounded-xl ${isDarkMode ? 'bg-slate-900' : 'bg-slate-100'}`}><TypeButton type="BUY" current={txn.type} onClick={() => setTxn({...txn, type: 'BUY'})} isDarkMode={isDarkMode} /><TypeButton type="SELL" current={txn.type} onClick={() => setTxn({...txn, type: 'SELL'})} isDarkMode={isDarkMode} /></div>
-                                <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg mt-2">Execute Order</button>
+                                <div className={`flex p-1 rounded-xl ${isDarkMode ? 'bg-slate-900' : 'bg-slate-100'}`}>
+                                    <TypeButton type="BUY" current={txn.type} onClick={() => setTxn({...txn, type: 'BUY'})} isDarkMode={isDarkMode} />
+                                    <TypeButton type="SELL" current={txn.type} onClick={() => setTxn({...txn, type: 'SELL'})} isDarkMode={isDarkMode} />
+                                </div>
+                                <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 active:scale-95 transition-transform">
+                                    Execute Order
+                                </button>
                             </form>
                         </motion.div>
                     </>
@@ -310,86 +337,98 @@ export default function Portfolio({ token, isDarkMode }) {
     );
 }
 
-// --- COMPONENTS ---
+// --- SUB COMPONENTS (Is file mein hi define kar diye taaki errors na aaye) ---
 
-const DesktopRow = ({ h, i, colors, isDarkMode }) => {
-    const investVal = h.quantity * h.avg_price;
-    const curVal = h.quantity * h.current_price;
-    const rowPnL = curVal - investVal;
-    const percent = ((rowPnL / investVal) * 100).toFixed(2);
-    const colorClass = colors[i % colors.length].replace('bg-', 'text-');
-
+function DesktopRow({ h, i, colors, isDarkMode }) {
+    const totalVal = h.quantity * h.current_price;
+    const invested = h.quantity * h.avg_price;
+    const pnl = totalVal - invested;
+    
     return (
-        <tr className={`border-b last:border-0 transition-colors ${isDarkMode ? 'border-slate-800 hover:bg-slate-800/40' : 'border-slate-50 hover:bg-slate-50'}`}>
+        <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
             <td className="p-5 pl-6">
-                <div className="flex items-center gap-4">
-                    <StockLogo symbol={h.symbol} isDarkMode={isDarkMode} colorClass={colorClass} />
+                <div className="flex items-center gap-3">
+                    <div className={`w-2 h-8 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
-                        <div className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</div>
-                        {/* FIX: Removed opacity and set concrete colors */}
-                        <div className={`text-[10px] font-extrabold px-2 py-0.5 rounded w-fit mt-1 ${isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>
-                            EQUITY
-                        </div>
+                        <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-50">{h.name}</p>
                     </div>
                 </div>
             </td>
-            <td className={`p-5 text-center text-sm font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{h.quantity}</td>
-            <td className={`p-5 text-right text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>₹{h.avg_price}</td>
-            <td className={`p-5 text-right text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{h.current_price}</td>
-            <td className="p-5 pr-6 text-right">
-                <div className={`font-black text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{curVal.toLocaleString()}</div>
-                <div className={`text-xs font-bold mt-1 ${rowPnL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {rowPnL >= 0 ? '+' : ''}₹{Math.abs(rowPnL).toFixed(0)} ({percent}%)
+            <td className={`p-5 text-center font-mono font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{h.quantity}</td>
+            <td className={`p-5 text-right font-mono ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>₹{h.avg_price.toLocaleString()}</td>
+            <td className={`p-5 text-right font-mono font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{h.current_price.toLocaleString()}</td>
+            <td className="p-5 text-right pr-6">
+                <div className="flex flex-col items-end">
+                    <span className={`font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{totalVal.toLocaleString()}</span>
+                    <span className={`text-[10px] font-bold ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {pnl >= 0 ? '+' : ''}{((pnl/invested)*100).toFixed(2)}%
+                    </span>
                 </div>
             </td>
         </tr>
     );
-};
+}
 
-const MobileCard = ({ h, i, colors, isDarkMode }) => {
-    const investVal = h.quantity * h.avg_price;
-    const curVal = h.quantity * h.current_price;
-    const rowPnL = curVal - investVal;
-    const colorClass = colors[i % colors.length].replace('bg-', 'text-');
+function MobileCard({ h, i, colors, isDarkMode }) {
+    const totalVal = h.quantity * h.current_price;
+    const invested = h.quantity * h.avg_price;
+    const pnl = totalVal - invested;
+
     return (
-        <div className={`p-4 rounded-[1.2rem] grid grid-cols-[auto_1fr_auto] gap-4 items-center border shadow-sm relative overflow-hidden ${isDarkMode ? 'bg-[#1e2433] border-slate-800/60 shadow-black/20' : 'bg-white border-slate-100 shadow-slate-200/50'}`}>
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${colors[i % colors.length]}`}></div>
-            <StockLogo symbol={h.symbol} isDarkMode={isDarkMode} colorClass={colorClass} />
-            <div className="min-w-0"> 
-                <div className={`font-bold text-sm truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</div>
-                {/* FIX: Removed opacity-60 for better visibility */}
-                <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>EQ</span>
-                    <span className={`text-[11px] font-bold truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.quantity} Qty</span>
+        <div className={`p-4 rounded-2xl border flex flex-col gap-3 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}>
+            <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                    <div className={`w-1.5 h-10 rounded-full ${colors[i % colors.length]}`}></div>
+                    <div>
+                        <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
+                        <p className="text-[10px] font-bold uppercase opacity-50">{h.name}</p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <span className={`block font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{totalVal.toLocaleString()}</span>
+                    <span className={`text-xs font-bold ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {pnl >= 0 ? '+' : ''}{((pnl/invested)*100).toFixed(2)}%
+                    </span>
                 </div>
             </div>
-            <div className="text-right whitespace-nowrap">
-                <div className={`font-black text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{curVal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                <div className={`text-[11px] font-bold mt-0.5 ${rowPnL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{rowPnL >= 0 ? '+' : ''}₹{Math.abs(rowPnL).toFixed(0)}</div>
+            <div className={`flex justify-between items-center pt-3 border-t text-xs font-mono ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-500'}`}>
+                <span>Qty: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.quantity}</b></span>
+                <span>Avg: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.avg_price}</b></span>
+                <span>LTP: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.current_price}</b></span>
             </div>
         </div>
     );
-};
+}
 
-const StockLogo = ({ symbol, isDarkMode, colorClass }) => {
-    const cleanSymbol = symbol.replace('.NS', '').replace('.BO', '').toUpperCase();
-    return <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-100'} ${colorClass}`}>{cleanSymbol.substring(0, 2)}</div>
-};
+function TypeButton({ type, current, onClick, isDarkMode }) {
+    const isActive = current === type;
+    const activeClass = type === 'BUY' 
+        ? 'bg-emerald-500 text-white shadow-emerald-500/30' 
+        : 'bg-red-500 text-white shadow-red-500/30';
+    
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`flex-1 py-2.5 rounded-lg text-xs font-black tracking-widest transition-all ${isActive ? activeClass + ' shadow-lg' : (isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-600')}`}
+        >
+            {type}
+        </button>
+    );
+}
 
-const TypeButton = ({ type, current, onClick, isDarkMode }) => (
-    <button type="button" onClick={onClick} className={`flex-1 py-3 rounded-lg font-bold text-xs transition-all ${current === type ? (type === 'BUY' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-red-500 text-white shadow-lg') : 'opacity-50 hover:opacity-100'}`}>{type}</button>
-);
-
-const PortfolioSkeleton = ({ isDarkMode }) => (
-    <div className={`min-h-screen p-6 animate-pulse ${isDarkMode ? 'bg-[#0B0F19]' : 'bg-slate-50'}`}>
-        <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8 space-y-6">
-                <div className={`h-[200px] rounded-[1.5rem] w-full ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
-                <div className={`h-[400px] rounded-[1.5rem] w-full ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
-            </div>
-            <div className="hidden lg:block lg:col-span-4 space-y-6">
-                <div className={`h-[300px] rounded-[1.5rem] w-full ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+function PortfolioSkeleton({ isDarkMode }) {
+    return (
+        <div className={`min-h-screen p-6 ${isDarkMode ? 'bg-[#0B0F19]' : 'bg-slate-50'}`}>
+            <div className="animate-pulse space-y-6 max-w-7xl mx-auto">
+                <div className="h-8 w-32 bg-slate-300 dark:bg-slate-800 rounded-lg"></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="col-span-2 h-40 bg-slate-300 dark:bg-slate-800 rounded-2xl"></div>
+                    <div className="h-40 bg-slate-300 dark:bg-slate-800 rounded-2xl"></div>
+                </div>
+                <div className="h-96 bg-slate-300 dark:bg-slate-800 rounded-2xl"></div>
             </div>
         </div>
-    </div>
-);
+    );
+}
