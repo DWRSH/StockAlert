@@ -241,7 +241,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                 {/* ------------------------- */}
                             </div>
 
-                            {/* Table */}
+                            {/* Table (Desktop) */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead className={`text-xs uppercase font-bold ${isDarkMode ? 'bg-slate-900/50 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
@@ -260,6 +260,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                             filteredHoldings.map((h, i) => <DesktopRow key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)
                                         )}
                                     </tbody>
+                                
                                 </table>
                             </div>
 
@@ -299,7 +300,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                             <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-[#0B0B19] border-slate-700' : 'bg-white border-slate-200'}`}>
                                                 {suggestions.map((s, idx) => (
                                                     <div key={idx} onClick={() => selectStock(s)} className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}>
-                                                        {/* --- FIX: SUGGESTION DISPLAY (Desktop & Mobile) --- */}
+                                                        {/* --- QUICK TRADE SUGGESTION DISPLAY --- */}
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                             <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -307,12 +308,11 @@ export default function Portfolio({ token, isDarkMode }) {
                                                             </span>
                                                         </div>
                                                         <div className="text-right">
-                                                            {/* Price visibility fix: Text color hamesha contrast mein ho */}
                                                             <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                                                                 ₹{formatPrice(s.current_price)}
                                                             </span>
                                                         </div>
-                                                        {/* --- END FIX --- */}
+                                                        {/* --- END QUICK TRADE FIX --- */}
                                                     </div>
                                                 ))}
                                             </motion.div>
@@ -354,7 +354,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                         <div className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-48 overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
                                             {suggestions.map((s, idx) => (
                                                 <div key={idx} onClick={() => selectStock(s)} className="px-4 py-3 cursor-pointer flex justify-between items-center border-b dark:border-slate-700 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-900">
-                                                    {/* --- FIX: MOBILE SUGGESTION DISPLAY --- */}
+                                                    {/* --- FIX: MOBILE BOTTOM SHEET SUGGESTION DISPLAY --- */}
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                         <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -362,7 +362,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                                         </span>
                                                     </div>
                                                     <div className="text-right">
-                                                        {/* Price visibility fix: White theme mein price visible ho */}
                                                         <span className={`font-mono text-sm font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                                                             ₹{formatPrice(s.current_price)}
                                                         </span>
@@ -409,8 +408,8 @@ function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-2 h-8 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        {/* Desktop: Company Name */}
-                        <p className={`text-[10px] font-bold uppercase tracking-wider opacity-50 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name}</p>
+                        {/* FIX: Desktop - Ensure Company Name visibility */}
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name}</p>
                     </div>
                 </div>
             </td>
@@ -443,7 +442,7 @@ function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-1.5 h-10 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        {/* --- FIX: MOBILE CARD COMPANY NAME ADDED --- */}
+                        {/* FIX: Mobile Card - Ensure Company Name visibility */}
                         <p className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name}</p>
                     </div>
                 </div>
@@ -456,7 +455,6 @@ function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
             </div>
             <div className={`flex justify-between items-center pt-3 border-t text-xs font-mono ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-500'}`}>
                 <span>Qty: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.quantity}</b></span>
-                {/* FIX: Price visibility on light theme */}
                 <span>Avg: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>₹{formatPrice(h.avg_price)}</b></span>
                 <span>LTP: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>₹{formatPrice(ltp)}</b></span>
             </div>
