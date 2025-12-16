@@ -186,7 +186,7 @@ export default function Portfolio({ token, isDarkMode }) {
                     <div className="hidden md:block relative w-96">
                         <input 
                             type="text" 
-                            placeholder="Filter your holdings..." 
+                            placeholder="Search your holdings..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className={`w-full pl-10 pr-4 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-200 text-slate-900 placeholder-slate-400'}`}
@@ -222,11 +222,20 @@ export default function Portfolio({ token, isDarkMode }) {
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-4xl sm:text-5xl font-bold tracking-tight">₹{formatPrice(currentValue)}</span>
                                     </div>
-                                    <div className={`mt-2 flex items-center gap-2 text-sm font-medium ${totalPnL >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                        <span className={`px-2 py-1 rounded-md bg-opacity-10 ${totalPnL >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-                                            {totalPnL >= 0 ? '+' : ''}₹{formatPrice(Math.abs(totalPnL))}
+                                    
+                                    {/* FIX 2: BETTER CONTRAST FOR P&L BADGE */}
+                                    <div className={`mt-3 flex items-center gap-2 text-sm font-medium`}>
+                                        <span className={`px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
+                                            totalPnL >= 0 
+                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+                                            : 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
+                                        }`}>
+                                            {totalPnL >= 0 ? '▲' : '▼'} ₹{formatPrice(Math.abs(totalPnL))}
                                         </span>
-                                        <span>({pnlPercentage}%) All Time</span>
+                                        <span className={`font-bold ${totalPnL >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                            ({pnlPercentage}%)
+                                        </span>
+                                        <span className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>All Time</span>
                                     </div>
                                 </div>
 
@@ -273,11 +282,12 @@ export default function Portfolio({ token, isDarkMode }) {
                                     <table className="w-full text-left border-collapse">
                                         <thead className={`text-xs uppercase font-bold tracking-wider border-b ${isDarkMode ? 'bg-slate-950/50 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                                             <tr>
-                                                <th className="p-5 pl-6">Instrument</th>
-                                                <th className="p-5 text-right">Qty</th>
-                                                <th className="p-5 text-right">Avg. Price</th>
-                                                <th className="p-5 text-right">LTP</th>
-                                                <th className="p-5 text-right pr-6">Value / P&L</th>
+                                                {/* FIX 3: REDUCED PADDING FOR LAPTOP FIT */}
+                                                <th className="px-4 py-4 pl-6">Instrument</th>
+                                                <th className="px-4 py-4 text-right">Qty</th>
+                                                <th className="px-4 py-4 text-right">Avg. Price</th>
+                                                <th className="px-4 py-4 text-right">LTP</th>
+                                                <th className="px-4 py-4 text-right pr-6">Value / P&L</th>
                                             </tr>
                                         </thead>
                                         <tbody className={`divide-y text-sm ${isDarkMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
@@ -370,13 +380,14 @@ function TradeForm({ txn, setTxn, handleTransaction, showSuggestions, setShowSug
         setShowSuggestions(false);
     };
 
+    // FIX 1: PROPER PLACEHOLDERS
     return (
         <form onSubmit={handleTransaction} className="flex flex-col gap-4">
             <div className="relative z-20">
                 <label className="text-xs font-bold uppercase opacity-50 mb-1 block ml-1">Stock Symbol</label>
                 <input 
                     type="text" 
-                    placeholder="e.g. RELIANCE" 
+                    placeholder="Search (e.g. RELIANCE, TCS)" 
                     className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm transition-all uppercase ${isDarkMode ? 'bg-slate-950 border-slate-800 focus:border-indigo-500' : 'bg-slate-50 border-slate-200 focus:bg-white focus:border-indigo-500'}`} 
                     value={txn.symbol} 
                     onChange={e => { setTxn({...txn, symbol: e.target.value.toUpperCase()}); setShowSuggestions(true); }} 
@@ -407,11 +418,11 @@ function TradeForm({ txn, setTxn, handleTransaction, showSuggestions, setShowSug
             <div className="grid grid-cols-2 gap-3">
                 <div>
                     <label className="text-xs font-bold uppercase opacity-50 mb-1 block ml-1">Qty</label>
-                    <input type="number" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`} value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} />
+                    <input type="number" placeholder="e.g. 10" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`} value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} />
                 </div>
                 <div>
                     <label className="text-xs font-bold uppercase opacity-50 mb-1 block ml-1">Price</label>
-                    <input type="number" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`} value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} />
+                    <input type="number" placeholder="Limit Price" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`} value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} />
                 </div>
             </div>
 
@@ -446,7 +457,8 @@ function DesktopRow({ h, i, colors, isDarkMode }) {
 
     return (
         <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
-            <td className="p-5 pl-6">
+            {/* FIX 3: REDUCED PADDING IN TD */}
+            <td className="px-4 py-4 pl-6">
                 <div className="flex items-center gap-4">
                     <div className={`w-1.5 h-10 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
@@ -455,12 +467,12 @@ function DesktopRow({ h, i, colors, isDarkMode }) {
                     </div>
                 </div>
             </td>
-            <td className="p-5 text-right font-mono font-medium opacity-80 tabular-nums">{h.quantity}</td>
-            <td className="p-5 text-right font-mono font-medium opacity-80 tabular-nums">₹{formatPrice(h.avg_price)}</td>
-            <td className="p-5 text-right">
+            <td className="px-4 py-4 text-right font-mono font-medium opacity-80 tabular-nums">{h.quantity}</td>
+            <td className="px-4 py-4 text-right font-mono font-medium opacity-80 tabular-nums">₹{formatPrice(h.avg_price)}</td>
+            <td className="px-4 py-4 text-right">
                 <span className="font-mono font-bold tabular-nums">₹{formatPrice(ltp)}</span>
             </td>
-            <td className="p-5 text-right pr-6">
+            <td className="px-4 py-4 text-right pr-6">
                 <div className="flex flex-col items-end">
                     <span className="font-bold font-mono text-sm tabular-nums">₹{formatPrice(totalVal)}</span>
                     <span className={`text-[11px] font-bold flex items-center gap-1 ${pnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
