@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Toaster, toast } from 'react-hot-toast'; // Toaster ko yahan se hata diya hai
+import { Toaster, toast } from 'react-hot-toast';
 
 // --- API URL SETUP (.env se value lega) ---
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -10,6 +10,11 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PlusIcon = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className || "w-6 h-6"}>
         <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
+    </svg>
+);
+const SearchIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className || "w-6 h-6"}>
+        <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clipRule="evenodd" />
     </svg>
 );
 
@@ -22,12 +27,15 @@ const formatPrice = (price) => {
 export default function Portfolio({ token, isDarkMode }) {
     const [holdings, setHoldings] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    // --- NEW STATE FOR SEARCH ---
+    const [searchTerm, setSearchTerm] = useState('');
 
     // UI State
     const [showBottomSheet, setShowBottomSheet] = useState(false);
     const [txn, setTxn] = useState({ symbol: '', quantity: '', price: '', type: 'BUY' });
 
-    // Search States
+    // Search States (Quick Trade ke liye)
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -69,7 +77,7 @@ export default function Portfolio({ token, isDarkMode }) {
     }, [token]);
 
 
-    // Search Logic (Same as before)
+    // Search Logic (Quick Trade ke liye)
     useEffect(() => {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
@@ -87,10 +95,10 @@ export default function Portfolio({ token, isDarkMode }) {
     const handleTransaction = async (e) => {
         e.preventDefault();
         if (!txn.symbol || txn.quantity <= 0 || txn.price <= 0) {
-            toast.error("Invalid Input", { duration: 3000, position: 'bottom-right' }); // Position set ki
+            toast.error("Invalid Input", { duration: 3000, position: 'bottom-right' });
             return;
         }
-        const tId = toast.loading("Processing...", { position: 'bottom-right' }); // Position set ki
+        const tId = toast.loading("Processing...", { position: 'bottom-right' });
         const payload = {
             symbol: txn.symbol.toUpperCase(),
             quantity: Number(txn.quantity),
@@ -101,7 +109,6 @@ export default function Portfolio({ token, isDarkMode }) {
             await axios.post(`${API_URL}/portfolio/transaction`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            // Duration default 4000ms hoti hai. Custom duration set nahi ki to 4s baad chali jayegi.
             toast.success("Saved!", { id: tId, position: 'bottom-right' }); 
             setShowBottomSheet(false);
             setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' });
@@ -126,16 +133,18 @@ export default function Portfolio({ token, isDarkMode }) {
     const totalPnL = currentValue - totalInvested;
     const pnlPercentage = totalInvested > 0 ? ((totalPnL / totalInvested) * 100).toFixed(2) : 0;
 
+    // --- FILTERED HOLDINGS LOGIC ---
+    const filteredHoldings = holdings.filter(h => 
+        h.symbol.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        h.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     if (loading) return <PortfolioSkeleton isDarkMode={isDarkMode} />;
 
     return (
         <div className={`min-h-screen pb-20 md:pb-10 ${isDarkMode ? 'bg-[#0B0F19]' : 'bg-slate-50'}`}>
             
-            {/* --- FIX: TOASTER REMOVED FROM HERE ---
-               Toaster component ko yahan se hata diya gaya hai. 
-               Ab ye maan kar chala ja raha hai ki ye aapki App.js ya Layout.js file mein ek baar lagaya gaya hai.
-               Example: <Toaster position="bottom-right" /> 
-            */}
+            {/* Note: Toaster should be outside this component, ideally in App.js or Layout.js */}
 
             {/* MOBILE HEADER */}
             <div className="md:hidden relative px-5 pt-6 pb-4 flex justify-between items-start">
@@ -201,12 +210,29 @@ export default function Portfolio({ token, isDarkMode }) {
                         </div>
 
                         {/* 2. HOLDINGS TABLE */}
-                        <div className className={`rounded-[1.5rem] border overflow-hidden min-h-[400px] flex flex-col ${isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50'}`}>
-                            <div className={`p-6 border-b flex justify-between items-center ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                                <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Holdings ({holdings.length})</h3>
-                                <div className="hidden md:flex gap-2">
-                                    <span className={`text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer ${isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>Current Value</span>
+                        <div className={`rounded-[1.5rem] border overflow-hidden min-h-[400px] flex flex-col ${isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50'}`}>
+                            
+                            <div className={`p-6 border-b flex flex-col md:flex-row md:justify-between md:items-center gap-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+                                
+                                {/* Title and Search Bar Container */}
+                                <div className="flex justify-between items-center w-full md:w-auto">
+                                    <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
+                                        Holdings ({filteredHoldings.length}/{holdings.length})
+                                    </h3>
                                 </div>
+
+                                {/* --- HOLDINGS SEARCH BAR --- */}
+                                <div className="relative w-full md:w-64">
+                                    <input
+                                        type="text"
+                                        placeholder="Search holding by Symbol or Name"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className={`w-full pl-10 pr-4 py-2 text-sm rounded-xl font-medium outline-none border transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-500'}`}
+                                    />
+                                    <SearchIcon className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                                </div>
+                                {/* ------------------------- */}
                             </div>
 
                             {/* Table */}
@@ -222,10 +248,10 @@ export default function Portfolio({ token, isDarkMode }) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                                        {holdings.length === 0 ? (
-                                            <tr><td colSpan="5" className="p-12 text-center opacity-40">No positions found.</td></tr>
+                                        {filteredHoldings.length === 0 ? (
+                                            <tr><td colSpan="5" className="p-12 text-center opacity-40">No matching positions found.</td></tr>
                                         ) : (
-                                            holdings.map((h, i) => <DesktopRow key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)
+                                            filteredHoldings.map((h, i) => <DesktopRow key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)
                                         )}
                                     </tbody>
                                 </table>
@@ -233,8 +259,8 @@ export default function Portfolio({ token, isDarkMode }) {
 
                             {/* Mobile List */}
                             <div className="md:hidden flex flex-col p-2 gap-2">
-                                {holdings.length === 0 && <p className="text-center p-8 opacity-40">No positions found.</p>}
-                                {holdings.map((h, i) => <MobileCard key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)}
+                                {filteredHoldings.length === 0 && <p className="text-center p-8 opacity-40">No matching positions found.</p>}
+                                {filteredHoldings.map((h, i) => <MobileCard key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)}
                             </div>
                         </div>
                     </div>
