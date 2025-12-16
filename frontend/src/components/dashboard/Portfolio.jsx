@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'react-hot-toast';
 
-// --- API URL SETUP (.env se value lega) ---
+// --- API URL SETUP ---
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // --- INLINE ICONS ---
@@ -18,7 +18,6 @@ const SearchIcon = ({ className }) => (
     </svg>
 );
 
-// --- HELPER FUNCTION FOR FORMATTING (2 Decimal Places) ---
 const formatPrice = (price) => {
     if (typeof price !== 'number' || isNaN(price)) return 'N/A';
     return price.toFixed(2);
@@ -27,34 +26,27 @@ const formatPrice = (price) => {
 export default function Portfolio({ token, isDarkMode }) {
     const [holdings, setHoldings] = useState([]);
     const [loading, setLoading] = useState(true);
-    
-    // --- STATE FOR HOLDINGS SEARCH ---
     const [searchTerm, setSearchTerm] = useState('');
-
-    // UI State
     const [showBottomSheet, setShowBottomSheet] = useState(false);
     const [txn, setTxn] = useState({ symbol: '', quantity: '', price: '', type: 'BUY' });
-
-    // Search States (Quick Trade ke liye)
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
 
-    // --- REAL DATA FETCHING FUNCTION WITH BACKGROUND OPTION ---
+    // --- 1. FETCH PORTFOLIO ---
     const fetchPortfolio = async (isBackground = false) => {
         if (!isBackground) setLoading(true); 
-        
         try {
             const res = await axios.get(`${API_URL}/portfolio`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            if (Array.isArray(res.data)) {
-                setHoldings(res.data);
-            } else {
-                setHoldings(res.data.holdings || []); 
-            }
+            const rawData = Array.isArray(res.data) ? res.data : (res.data.holdings || []);
+            setHoldings(rawData);
+            
+            // Background fetch khatam hone ke baad missing names check karo
+            if(!isBackground) fetchMissingNames(rawData);
 
         } catch (error) {
             console.error("Error fetching portfolio:", error);
@@ -63,21 +55,50 @@ export default function Portfolio({ token, isDarkMode }) {
         }
     };
 
-    // --- POLLING LOGIC (Auto-Refresh) ---
+    // --- 2. SMART NAME FETCHER (Jugaad for N/A) ---
+    // Agar backend name nahi bhej raha, to hum frontend se search API call karke name layenge
+    const fetchMissingNames = async (currentHoldings) => {
+        const updatedHoldings = [...currentHoldings];
+        let hasChanges = false;
+
+        // Sirf un stocks ko dhoondo jinka naam missing hai
+        for (let i = 0; i < updatedHoldings.length; i++) {
+            const stock = updatedHoldings[i];
+            
+            if (!stock.name || stock.name === 'N/A') {
+                try {
+                    // Search API call karo usi symbol ke liye
+                    const res = await axios.get(`${API_URL}/search-stock?query=${stock.symbol}`);
+                    if (res.data && res.data.length > 0) {
+                        // Pehla matching result uthao
+                        const match = res.data.find(s => s.symbol === stock.symbol);
+                        if (match && match.name) {
+                            updatedHoldings[i] = { ...stock, name: match.name };
+                            hasChanges = true;
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Failed to fetch name for ${stock.symbol}`);
+                }
+            }
+        }
+
+        // Agar humne koi naam naya dhoondha hai, to state update karo
+        if (hasChanges) {
+            setHoldings(updatedHoldings);
+        }
+    };
+
+    // --- POLLING ---
     useEffect(() => { 
         if(token) {
             fetchPortfolio(false); 
-
-            const interval = setInterval(() => {
-                fetchPortfolio(true); 
-            }, 5000); // Har 5 second mein refresh
-
+            const interval = setInterval(() => fetchPortfolio(true), 5000); 
             return () => clearInterval(interval);
         }
     }, [token]);
 
-
-    // Search Logic (Quick Trade ke liye)
+    // --- SEARCH LOGIC ---
     useEffect(() => {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
@@ -95,7 +116,7 @@ export default function Portfolio({ token, isDarkMode }) {
     const handleTransaction = async (e) => {
         e.preventDefault();
         if (!txn.symbol || txn.quantity <= 0 || txn.price <= 0) {
-            toast.error("Invalid Input", { duration: 3000, position: 'bottom-right' });
+            toast.error("Invalid Input", { position: 'bottom-right' });
             return;
         }
         const tId = toast.loading("Processing...", { position: 'bottom-right' });
@@ -119,31 +140,21 @@ export default function Portfolio({ token, isDarkMode }) {
     };
 
     const selectStock = (stock) => {
-        setTxn({ 
-            ...txn, 
-            symbol: stock.symbol, 
-            price: stock.current_price || txn.price 
-        });
+        setTxn({ ...txn, symbol: stock.symbol, price: stock.current_price || txn.price });
         setShowSuggestions(false);
     };
 
-    // Calculations
     const totalInvested = holdings.reduce((acc, curr) => acc + (curr.quantity * curr.avg_price), 0);
     const currentValue = holdings.reduce((acc, curr) => acc + (curr.quantity * (curr.current_price || curr.avg_price)), 0); 
     const totalPnL = currentValue - totalInvested;
     const pnlPercentage = totalInvested > 0 ? ((totalPnL / totalInvested) * 100).toFixed(2) : 0;
 
-    // --- FILTERED HOLDINGS LOGIC (FIXED) ---
     const filteredHoldings = holdings.filter(h => {
-        // 1. Safety Check: Agar item hi null/undefined hai to skip karo
         if (!h) return false; 
-        
         const lowerSearchTerm = searchTerm.toLowerCase();
-        
-        // 2. Search Logic: Property ko access karte time fallback (|| '') use karo
         const symbolMatch = (h.symbol || '').toLowerCase().includes(lowerSearchTerm);
+        // Ab yahan naam bhi search mein aayega kyunki humne fetchMissingNames use kiya hai
         const nameMatch = (h.name || '').toLowerCase().includes(lowerSearchTerm);
-        
         return symbolMatch || nameMatch;
     });
 
@@ -164,84 +175,45 @@ export default function Portfolio({ token, isDarkMode }) {
             </div>
 
             <div className="px-4 md:px-8 space-y-6 max-w-[1600px] mx-auto pt-4 md:pt-8">
-
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-                    {/* LEFT COLUMN (Main Content) */}
+                    {/* LEFT COLUMN */}
                     <div className="lg:col-span-8 flex flex-col gap-6">
-
-                        {/* 1. STATS ROW */}
+                        {/* STATS ROW */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {/* Net Worth Card */}
-                            <div className={`sm:col-span-2 relative overflow-hidden rounded-[1.5rem] p-6 flex flex-col justify-between min-h-[160px] ${
-                                isDarkMode ? 'bg-gradient-to-r from-indigo-900 via-slate-900 to-slate-900 border border-white/5' : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-200'
-                            }`}>
+                            <div className={`sm:col-span-2 relative overflow-hidden rounded-[1.5rem] p-6 flex flex-col justify-between min-h-[160px] ${isDarkMode ? 'bg-gradient-to-r from-indigo-900 via-slate-900 to-slate-900 border border-white/5' : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-200'}`}>
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-[40px] -mr-5 -mt-5"></div>
                                 <div className="relative z-10">
                                     <span className="text-xs font-bold uppercase tracking-widest text-white/80 mb-1 block">Net Worth</span>
-                                    <h1 className="text-4xl font-black tracking-tight text-white mb-2">
-                                        ₹{formatPrice(currentValue)}
-                                    </h1>
+                                    <h1 className="text-4xl font-black tracking-tight text-white mb-2">₹{formatPrice(currentValue)}</h1>
                                     <span className={`px-2 py-1 rounded-lg text-xs font-bold backdrop-blur-md border border-white/10 w-fit flex items-center gap-1 ${totalPnL >= 0 ? 'bg-emerald-400/20 text-emerald-100' : 'bg-red-400/20 text-red-100'}`}>
                                         {totalPnL >= 0 ? '+' : ''}₹{formatPrice(Math.abs(totalPnL))} ({pnlPercentage}%)
                                     </span>
                                 </div>
                             </div>
-
-                            {/* Invested Card */}
-                            <div className={`rounded-[1.5rem] p-6 flex flex-col justify-center gap-1 border ${
-                                isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-lg shadow-slate-100'
-                            }`}>
+                            <div className={`rounded-[1.5rem] p-6 flex flex-col justify-center gap-1 border ${isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-lg shadow-slate-100'}`}>
                                 <span className="text-xs font-bold uppercase tracking-widest opacity-50">Invested</span>
-                                <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
-                                    ₹{formatPrice(totalInvested)}
-                                </h2>
-                                
-                                {/* Multi-Color Progress Bar */}
+                                <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>₹{formatPrice(totalInvested)}</h2>
                                 <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden flex">
                                     {holdings.map((h, i) => {
                                         const itemInvested = h.quantity * h.avg_price;
                                         const itemPercent = totalInvested > 0 ? (itemInvested / totalInvested) * 100 : 0;
-                                        return (
-                                            <div 
-                                                key={h._id || i}
-                                                style={{ width: `${itemPercent}%` }} 
-                                                className={`h-full ${colors[i % colors.length]}`} 
-                                                title={`${h.symbol}: ${itemPercent.toFixed(1)}%`}
-                                            />
-                                        );
+                                        return <div key={h._id || i} style={{ width: `${itemPercent}%` }} className={`h-full ${colors[i % colors.length]}`} title={`${h.symbol}: ${itemPercent.toFixed(1)}%`} />;
                                     })}
                                 </div>
                             </div>
                         </div>
 
-                        {/* 2. HOLDINGS TABLE */}
+                        {/* HOLDINGS TABLE */}
                         <div className={`rounded-[1.5rem] border overflow-hidden min-h-[400px] flex flex-col ${isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50'}`}>
-                            
                             <div className={`p-6 border-b flex flex-col md:flex-row md:justify-between md:items-center gap-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                                
-                                {/* Title and Search Bar Container */}
                                 <div className="flex justify-between items-center w-full md:w-auto">
-                                    <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
-                                        Holdings ({filteredHoldings.length}/{holdings.length})
-                                    </h3>
+                                    <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Holdings ({filteredHoldings.length}/{holdings.length})</h3>
                                 </div>
-
-                                {/* --- HOLDINGS SEARCH BAR --- */}
                                 <div className="relative w-full md:w-64">
-                                    <input
-                                        type="text"
-                                        placeholder="Search holding by Symbol or Name"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className={`w-full pl-10 pr-4 py-2 text-sm rounded-xl font-medium outline-none border transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-500'}`}
-                                    />
+                                    <input type="text" placeholder="Search holding..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`w-full pl-10 pr-4 py-2 text-sm rounded-xl font-medium outline-none border transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-500'}`} />
                                     <SearchIcon className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
                                 </div>
-                                {/* ------------------------- */}
                             </div>
-
-                            {/* Table */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead className={`text-xs uppercase font-bold ${isDarkMode ? 'bg-slate-900/50 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
@@ -260,11 +232,8 @@ export default function Portfolio({ token, isDarkMode }) {
                                             filteredHoldings.map((h, i) => <DesktopRow key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)
                                         )}
                                     </tbody>
-                                
                                 </table>
                             </div>
-
-                            {/* Mobile List */}
                             <div className="md:hidden flex flex-col p-2 gap-2">
                                 {filteredHoldings.length === 0 && <p className="text-center p-8 opacity-40">No matching positions found.</p>}
                                 {filteredHoldings.map((h, i) => <MobileCard key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)}
@@ -272,7 +241,7 @@ export default function Portfolio({ token, isDarkMode }) {
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN (Quick Trade) */}
+                    {/* RIGHT COLUMN */}
                     <div className="hidden lg:flex lg:col-span-4 flex-col gap-6">
                         <div className={`sticky top-6 rounded-[1.5rem] p-6 border ${isDarkMode ? 'bg-[#1e2433] border-slate-700' : 'bg-white border-slate-100 shadow-xl shadow-indigo-100'}`}>
                             <div className="flex items-center gap-3 mb-6">
@@ -282,57 +251,36 @@ export default function Portfolio({ token, isDarkMode }) {
                                     <p className="text-xs opacity-50 font-bold uppercase">Buy or Sell Instantly</p>
                                 </div>
                             </div>
-
                             <form onSubmit={handleTransaction} className="flex flex-col gap-4">
                                 <div className="relative z-50">
-                                    <input 
-                                        type="text" placeholder="SEARCH SYMBOL" 
-                                        className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-500'}`}
-                                        value={txn.symbol}
-                                        onChange={e => {
-                                            setTxn({...txn, symbol: e.target.value.toUpperCase()});
-                                            setShowSuggestions(true);
-                                        }}
-                                        onFocus={() => setShowSuggestions(true)}
-                                    />
+                                    <input type="text" placeholder="SEARCH SYMBOL" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-500'}`} value={txn.symbol} onChange={e => { setTxn({...txn, symbol: e.target.value.toUpperCase()}); setShowSuggestions(true); }} onFocus={() => setShowSuggestions(true)} />
                                     <AnimatePresence>
                                         {showSuggestions && suggestions.length > 0 && (
                                             <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-[#0B0F19] border-slate-700' : 'bg-white border-slate-200'}`}>
                                                 {suggestions.map((s, idx) => (
                                                     <div key={idx} onClick={() => selectStock(s)} className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}>
-                                                        {/* --- QUICK TRADE SUGGESTION DISPLAY FIX --- */}
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
-                                                            <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                                {s.name || 'N/A'} 
-                                                            </span>
+                                                            <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.name || 'N/A'}</span>
                                                         </div>
                                                         <div className="text-right">
-                                                            <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                                                ₹{formatPrice(s.current_price)}
-                                                            </span>
+                                                            <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{formatPrice(s.current_price)}</span>
                                                         </div>
-                                                        {/* --- END QUICK TRADE FIX --- */}
                                                     </div>
                                                 ))}
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
-
                                 <div className="grid grid-cols-2 gap-3">
                                     <input type="number" placeholder="Qty" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} />
                                     <input type="number" placeholder="Price" className={`w-full px-4 py-3 rounded-xl font-bold outline-none border text-sm ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} />
                                 </div>
-
                                 <div className={`flex p-1 rounded-xl ${isDarkMode ? 'bg-slate-900' : 'bg-slate-100'}`}>
                                     <TypeButton type="BUY" current={txn.type} onClick={() => setTxn({...txn, type: 'BUY'})} isDarkMode={isDarkMode} />
                                     <TypeButton type="SELL" current={txn.type} onClick={() => setTxn({...txn, type: 'SELL'})} isDarkMode={isDarkMode} />
                                 </div>
-
-                                <button type="submit" className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all">
-                                    Execute Order
-                                </button>
+                                <button type="submit" className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all">Execute Order</button>
                             </form>
                         </div>
                     </div>
@@ -354,19 +302,13 @@ export default function Portfolio({ token, isDarkMode }) {
                                         <div className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-48 overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
                                             {suggestions.map((s, idx) => (
                                                 <div key={idx} onClick={() => selectStock(s)} className="px-4 py-3 cursor-pointer flex justify-between items-center border-b dark:border-slate-700 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-900">
-                                                    {/* --- MOBILE BOTTOM SHEET SUGGESTION DISPLAY FIX --- */}
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
-                                                        <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                            {s.name || 'N/A'}
-                                                        </span>
+                                                        <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.name || 'N/A'}</span>
                                                     </div>
                                                     <div className="text-right">
-                                                        <span className={`font-mono text-sm font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                                            ₹{formatPrice(s.current_price)}
-                                                        </span>
+                                                        <span className={`font-mono text-sm font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{formatPrice(s.current_price)}</span>
                                                     </div>
-                                                    {/* --- END FIX --- */}
                                                 </div>
                                             ))}
                                         </div>
@@ -380,9 +322,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                     <TypeButton type="BUY" current={txn.type} onClick={() => setTxn({...txn, type: 'BUY'})} isDarkMode={isDarkMode} />
                                     <TypeButton type="SELL" current={txn.type} onClick={() => setTxn({...txn, type: 'SELL'})} isDarkMode={isDarkMode} />
                                 </div>
-                                <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 active:scale-95 transition-transform">
-                                    Execute Order
-                                </button>
+                                <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 active:scale-95 transition-transform">Execute Order</button>
                             </form>
                         </motion.div>
                     </>
@@ -391,8 +331,6 @@ export default function Portfolio({ token, isDarkMode }) {
         </div>
     );
 }
-
-// --- SUB COMPONENTS ---
 
 function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
     const ltp = h.current_price || h.avg_price || 0;
@@ -408,8 +346,7 @@ function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-2 h-8 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        {/* FIX: Company Name placement with N/A fallback */}
-                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name || 'N/A'}</p>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name || 'Loading...'}</p>
                     </div>
                 </div>
             </td>
@@ -442,8 +379,7 @@ function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-1.5 h-10 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        {/* FIX: Company Name placement with N/A fallback */}
-                        <p className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name || 'N/A'}</p>
+                        <p className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name || 'Loading...'}</p>
                     </div>
                 </div>
                 <div className="text-right">
