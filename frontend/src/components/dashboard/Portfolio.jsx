@@ -241,7 +241,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                 {/* ------------------------- */}
                             </div>
 
-                            {/* Table (Desktop) */}
+                            {/* Table */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead className={`text-xs uppercase font-bold ${isDarkMode ? 'bg-slate-900/50 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
@@ -297,14 +297,14 @@ export default function Portfolio({ token, isDarkMode }) {
                                     />
                                     <AnimatePresence>
                                         {showSuggestions && suggestions.length > 0 && (
-                                            <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-[#0B0B19] border-slate-700' : 'bg-white border-slate-200'}`}>
+                                            <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-[#0B0F19] border-slate-700' : 'bg-white border-slate-200'}`}>
                                                 {suggestions.map((s, idx) => (
                                                     <div key={idx} onClick={() => selectStock(s)} className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}>
                                                         {/* --- QUICK TRADE SUGGESTION DISPLAY --- */}
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                             <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                                {s.name || 'Company Name N/A'}
+                                                                {s.name || 'N/A'}
                                                             </span>
                                                         </div>
                                                         <div className="text-right">
@@ -358,7 +358,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                         <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                            {s.name || 'Company Name N/A'}
+                                                            {s.name || 'N/A'}
                                                         </span>
                                                     </div>
                                                     <div className="text-right">
@@ -408,8 +408,8 @@ function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-2 h-8 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        {/* FINAL FIX: Desktop - Ensure Company Name is visible below symbol */}
-                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name}</p>
+                        {/* FIX: Company Name placement with N/A fallback */}
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name || 'N/A'}</p>
                     </div>
                 </div>
             </td>
@@ -442,8 +442,8 @@ function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-1.5 h-10 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        {/* FINAL FIX: Mobile Card - Ensure Company Name is visible below symbol */}
-                        <p className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name}</p>
+                        {/* FIX: Company Name placement with N/A fallback */}
+                        <p className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name || 'N/A'}</p>
                     </div>
                 </div>
                 <div className="text-right">
