@@ -3,7 +3,7 @@ from app.db import database
 from app.utils.auth import get_current_user 
 from pydantic import BaseModel
 from datetime import datetime
-import yfinance as yf # ✅ NEW: Live Price ke liye
+import yfinance as yf 
 
 router = APIRouter()
 
@@ -14,21 +14,26 @@ class Transaction(BaseModel):
     price: float
     type: str = "BUY"
 
-# --- Helper to get Live Price ---
-def get_live_price(symbol):
+# --- ✅ NEW HELPER: Get Price AND Name ---
+def get_live_data(symbol):
     try:
-        # User agar "RELIANCE" likhe to "RELIANCE.NS" bana do (NSE ke liye)
+        # NSE symbol adjust karo
         ticker_symbol = f"{symbol}.NS" if not symbol.endswith(".NS") and not symbol.endswith(".BO") else symbol
         
         stock = yf.Ticker(ticker_symbol)
-        data = stock.history(period="1d")
         
-        if not data.empty:
-            # Latest closing price uthao
-            return data["Close"].iloc[-1]
-        return None
+        # 1. Price nikalo
+        hist = stock.history(period="1d")
+        current_price = hist["Close"].iloc[-1] if not hist.empty else 0.0
+        
+        # 2. Company Name nikalo (yf.info se)
+        # Agar naam na mile to Symbol hi wapas kar do fallback ke liye
+        company_name = stock.info.get('longName', symbol)
+        
+        return {"price": current_price, "name": company_name}
+
     except Exception as e:
-        print(f"Error fetching price for {symbol}: {e}")
+        print(f"Error fetching data for {symbol}: {e}")
         return None
 
 # --- Routes ---
@@ -41,18 +46,23 @@ async def get_portfolio(user=Depends(get_current_user)):
     cursor = database.db.portfolio.find({"email": user["email"]})
     holdings = await cursor.to_list(length=100)
     
-    # ✅ Process Holdings with Live Data
     updated_holdings = []
     for h in holdings:
-        # Live Price Fetch karein
-        current_price = get_live_price(h["symbol"])
+        # ✅ Ab hum Price aur Name dono layenge
+        live_data = get_live_data(h["symbol"])
         
-        # Agar Live Price nahi mila, to Avg Price hi use karo (Safety ke liye)
-        final_price = current_price if current_price else h["avg_price"]
-        
-        # Data structure mein add karein
-        h["current_price"] = final_price
-        h["_id"] = str(h["_id"]) # ObjectId convert
+        if live_data:
+            h["current_price"] = live_data["price"]
+            
+            # Agar database me pehle se naam saved nahi hai, to live data wala naam use karo
+            if "name" not in h or not h["name"]:
+                h["name"] = live_data["name"]
+        else:
+            # Fallback agar API fail ho jaye
+            h["current_price"] = h["avg_price"]
+            h["name"] = h["symbol"] # Name nahi mila to symbol dikhao
+
+        h["_id"] = str(h["_id"]) 
         updated_holdings.append(h)
         
     return updated_holdings
@@ -65,20 +75,32 @@ async def add_transaction(txn: Transaction, user=Depends(get_current_user)):
     email = user["email"]
     existing = await database.db.portfolio.find_one({"email": email, "symbol": txn.symbol})
 
+    # ✅ Transaction ke time hi Name fetch karke DB me save kar lo
+    # Isse portfolio load fast hoga agli baar
+    company_name = txn.symbol # Default
+    try:
+        live_data = get_live_data(txn.symbol)
+        if live_data:
+            company_name = live_data["name"]
+    except:
+        pass
+
     if txn.type == "BUY":
         if existing:
             new_qty = existing["quantity"] + txn.quantity
             total_cost = (existing["quantity"] * existing["avg_price"]) + (txn.quantity * txn.price)
             new_avg = total_cost / new_qty
             
+            # Update karte waqt naam bhi ensure kar lo
             await database.db.portfolio.update_one(
                 {"_id": existing["_id"]},
-                {"$set": {"quantity": new_qty, "avg_price": new_avg}}
+                {"$set": {"quantity": new_qty, "avg_price": new_avg, "name": company_name}}
             )
         else:
             new_holding = {
                 "email": email,
                 "symbol": txn.symbol,
+                "name": company_name, # ✅ DB me Name save kar rahe hain
                 "quantity": txn.quantity,
                 "avg_price": txn.price,
                 "created_at": datetime.utcnow()
