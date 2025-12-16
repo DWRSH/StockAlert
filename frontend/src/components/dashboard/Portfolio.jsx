@@ -408,7 +408,7 @@ function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-2 h-8 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        {/* FIX: Desktop - Ensure Company Name visibility */}
+                        {/* FINAL FIX: Desktop - Ensure Company Name is visible below symbol */}
                         <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name}</p>
                     </div>
                 </div>
@@ -442,7 +442,7 @@ function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-1.5 h-10 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        {/* FIX: Mobile Card - Ensure Company Name visibility */}
+                        {/* FINAL FIX: Mobile Card - Ensure Company Name is visible below symbol */}
                         <p className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name}</p>
                     </div>
                 </div>
