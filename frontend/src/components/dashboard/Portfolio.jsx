@@ -1,23 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Toaster, toast } from 'react-hot-toast'; // Assuming you use react-hot-toast
-// import { API_URL } from '../../utils/helpers'; // Apne utils path ke hisab se adjust karein
-// import { SearchIcon, PlusIcon } from '../common/Icons'; // Niche inline icons use kiye hain agar ye files nahi hain
+import { Toaster, toast } from 'react-hot-toast';
 
-// --- Placeholder for API_URL if not imported ---
-const API_URL = "http://localhost:8000"; // Apni backend URL yahan set karein
+// --- API URL SETUP (.env se value lega) ---
+// Note: Agar aap Create React App use kar rahe hain to 'import.meta.env.VITE_API_URL' ki jagah 'process.env.REACT_APP_API_URL' likhein.
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-// --- INLINE ICONS (Agar aapke paas common/Icons file nahi hai to inhe use karein) ---
+// --- INLINE ICONS ---
 const PlusIcon = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className || "w-6 h-6"}>
         <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
-    </svg>
-);
-
-const SearchIcon = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className || "w-6 h-6"}>
-        <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clipRule="evenodd" />
     </svg>
 );
 
@@ -35,31 +28,33 @@ export default function Portfolio({ token, isDarkMode }) {
 
     const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
 
+    // --- REAL DATA FETCHING FUNCTION ---
     const fetchPortfolio = async () => {
         setLoading(true);
         try {
-            // Mock data agar API fail ho (Testing ke liye remove kar sakte hain)
-            // const res = await axios.get(`${API_URL}/portfolio`, { headers: { Authorization: `Bearer ${token}` } });
-            // setHoldings(res.data);
+            // Backend se real data call using dynamic API_URL
+            const res = await axios.get(`${API_URL}/portfolio`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             
-            // --- DEMO DATA FOR TESTING VISUALS (Remove this block & uncomment axios above for real app) ---
-            setTimeout(() => {
-                 setHoldings([
-                    { _id: '1', symbol: 'RELIANCE', name: 'Reliance Industries', quantity: 10, avg_price: 2400, current_price: 2500 },
-                    { _id: '2', symbol: 'TCS', name: 'Tata Consultancy Services', quantity: 5, avg_price: 3500, current_price: 3600 },
-                    { _id: '3', symbol: 'INFY', name: 'Infosys Ltd', quantity: 20, avg_price: 1400, current_price: 1350 },
-                 ]);
-                 setLoading(false);
-            }, 1000);
-            // ---------------------------------------------------------------------------------------------
+            if (Array.isArray(res.data)) {
+                setHoldings(res.data);
+            } else {
+                setHoldings(res.data.holdings || []); 
+            }
 
         } catch (error) {
-            console.error("Error fetching portfolio");
+            console.error("Error fetching portfolio:", error);
+            // Optional: Error toast hata sakte hain agar baar baar aa raha ho
+            // toast.error("Failed to load portfolio data"); 
+        } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { fetchPortfolio(); }, []);
+    useEffect(() => { 
+        if(token) fetchPortfolio(); 
+    }, [token]);
 
     // Search Logic
     useEffect(() => {
@@ -96,7 +91,7 @@ export default function Portfolio({ token, isDarkMode }) {
             toast.success("Saved!", { id: tId });
             setShowBottomSheet(false);
             setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' });
-            fetchPortfolio();
+            fetchPortfolio(); // Data update after transaction
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed", { id: tId });
         }
@@ -111,8 +106,9 @@ export default function Portfolio({ token, isDarkMode }) {
         setShowSuggestions(false);
     };
 
+    // Calculations
     const totalInvested = holdings.reduce((acc, curr) => acc + (curr.quantity * curr.avg_price), 0);
-    const currentValue = holdings.reduce((acc, curr) => acc + (curr.quantity * curr.current_price), 0);
+    const currentValue = holdings.reduce((acc, curr) => acc + (curr.quantity * (curr.current_price || curr.avg_price)), 0); 
     const totalPnL = currentValue - totalInvested;
     const pnlPercentage = totalInvested > 0 ? ((totalPnL / totalInvested) * 100).toFixed(2) : 0;
 
@@ -158,7 +154,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                 </div>
                             </div>
 
-                            {/* Invested Card - FIXED MULTI COLOR BAR */}
+                            {/* Invested Card */}
                             <div className={`rounded-[1.5rem] p-6 flex flex-col justify-center gap-1 border ${
                                 isDarkMode ? 'bg-[#151a25] border-slate-800' : 'bg-white border-slate-100 shadow-lg shadow-slate-100'
                             }`}>
@@ -167,14 +163,14 @@ export default function Portfolio({ token, isDarkMode }) {
                                     ₹{totalInvested.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                 </h2>
                                 
-                                {/* --- FIX START: Multi-color bar --- */}
+                                {/* Multi-Color Progress Bar */}
                                 <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden flex">
                                     {holdings.map((h, i) => {
                                         const itemInvested = h.quantity * h.avg_price;
                                         const itemPercent = totalInvested > 0 ? (itemInvested / totalInvested) * 100 : 0;
                                         return (
                                             <div 
-                                                key={h._id}
+                                                key={h._id || i}
                                                 style={{ width: `${itemPercent}%` }} 
                                                 className={`h-full ${colors[i % colors.length]}`} 
                                                 title={`${h.symbol}: ${itemPercent.toFixed(1)}%`}
@@ -182,7 +178,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                         );
                                     })}
                                 </div>
-                                {/* --- FIX END --- */}
                             </div>
                         </div>
 
@@ -211,7 +206,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                         {holdings.length === 0 ? (
                                             <tr><td colSpan="5" className="p-12 text-center opacity-40">No positions found.</td></tr>
                                         ) : (
-                                            holdings.map((h, i) => <DesktopRow key={h._id} h={h} i={i} colors={colors} isDarkMode={isDarkMode} />)
+                                            holdings.map((h, i) => <DesktopRow key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} />)
                                         )}
                                     </tbody>
                                 </table>
@@ -219,15 +214,14 @@ export default function Portfolio({ token, isDarkMode }) {
 
                             {/* Mobile List */}
                             <div className="md:hidden flex flex-col p-2 gap-2">
-                                {holdings.map((h, i) => <MobileCard key={h._id} h={h} i={i} colors={colors} isDarkMode={isDarkMode} />)}
+                                {holdings.length === 0 && <p className="text-center p-8 opacity-40">No positions found.</p>}
+                                {holdings.map((h, i) => <MobileCard key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} />)}
                             </div>
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN (Quick Trade Only) */}
+                    {/* RIGHT COLUMN (Quick Trade) */}
                     <div className="hidden lg:flex lg:col-span-4 flex-col gap-6">
-
-                        {/* QUICK TRADE WIDGET */}
                         <div className={`sticky top-6 rounded-[1.5rem] p-6 border ${isDarkMode ? 'bg-[#1e2433] border-slate-700' : 'bg-white border-slate-100 shadow-xl shadow-indigo-100'}`}>
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="p-2.5 bg-indigo-500 rounded-xl text-white"><PlusIcon /></div>
@@ -253,21 +247,13 @@ export default function Portfolio({ token, isDarkMode }) {
                                         {showSuggestions && suggestions.length > 0 && (
                                             <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-[#0B0F19] border-slate-700' : 'bg-white border-slate-200'}`}>
                                                 {suggestions.map((s, idx) => (
-                                                    <div 
-                                                        key={idx} 
-                                                        onClick={() => selectStock(s)} 
-                                                        className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}
-                                                    >
+                                                    <div key={idx} onClick={() => selectStock(s)} className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}>
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
-                                                            <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                                                                {s.name}
-                                                            </span>
+                                                            <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{s.name}</span>
                                                         </div>
                                                         <div className="text-right">
-                                                            <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                                                ₹{s.current_price ? s.current_price.toLocaleString() : 'N/A'}
-                                                            </span>
+                                                            <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{s.current_price ? s.current_price.toLocaleString() : 'N/A'}</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -295,7 +281,7 @@ export default function Portfolio({ token, isDarkMode }) {
                 </div>
             </div>
 
-            {/* MOBILE BOTTOM SHEET (Complete Code) */}
+            {/* MOBILE BOTTOM SHEET */}
             <AnimatePresence>
                 {showBottomSheet && (
                     <>
@@ -337,10 +323,11 @@ export default function Portfolio({ token, isDarkMode }) {
     );
 }
 
-// --- SUB COMPONENTS (Is file mein hi define kar diye taaki errors na aaye) ---
+// --- SUB COMPONENTS ---
 
 function DesktopRow({ h, i, colors, isDarkMode }) {
-    const totalVal = h.quantity * h.current_price;
+    const ltp = h.current_price || h.avg_price || 0;
+    const totalVal = h.quantity * ltp;
     const invested = h.quantity * h.avg_price;
     const pnl = totalVal - invested;
     
@@ -357,12 +344,12 @@ function DesktopRow({ h, i, colors, isDarkMode }) {
             </td>
             <td className={`p-5 text-center font-mono font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{h.quantity}</td>
             <td className={`p-5 text-right font-mono ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>₹{h.avg_price.toLocaleString()}</td>
-            <td className={`p-5 text-right font-mono font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{h.current_price.toLocaleString()}</td>
+            <td className={`p-5 text-right font-mono font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{ltp.toLocaleString()}</td>
             <td className="p-5 text-right pr-6">
                 <div className="flex flex-col items-end">
                     <span className={`font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{totalVal.toLocaleString()}</span>
                     <span className={`text-[10px] font-bold ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {pnl >= 0 ? '+' : ''}{((pnl/invested)*100).toFixed(2)}%
+                        {pnl >= 0 ? '+' : ''}{invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0}%
                     </span>
                 </div>
             </td>
@@ -371,7 +358,8 @@ function DesktopRow({ h, i, colors, isDarkMode }) {
 }
 
 function MobileCard({ h, i, colors, isDarkMode }) {
-    const totalVal = h.quantity * h.current_price;
+    const ltp = h.current_price || h.avg_price || 0;
+    const totalVal = h.quantity * ltp;
     const invested = h.quantity * h.avg_price;
     const pnl = totalVal - invested;
 
@@ -388,14 +376,14 @@ function MobileCard({ h, i, colors, isDarkMode }) {
                 <div className="text-right">
                     <span className={`block font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{totalVal.toLocaleString()}</span>
                     <span className={`text-xs font-bold ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {pnl >= 0 ? '+' : ''}{((pnl/invested)*100).toFixed(2)}%
+                        {pnl >= 0 ? '+' : ''}{invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0}%
                     </span>
                 </div>
             </div>
             <div className={`flex justify-between items-center pt-3 border-t text-xs font-mono ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-500'}`}>
                 <span>Qty: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.quantity}</b></span>
                 <span>Avg: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.avg_price}</b></span>
-                <span>LTP: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.current_price}</b></span>
+                <span>LTP: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{ltp}</b></span>
             </div>
         </div>
     );
