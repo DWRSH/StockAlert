@@ -14,6 +14,13 @@ const PlusIcon = ({ className }) => (
     </svg>
 );
 
+// --- HELPER FUNCTION FOR FORMATTING ---
+const formatPrice = (price) => {
+    if (typeof price !== 'number' || isNaN(price)) return 'N/A';
+    // Fix: Price ko 2 decimal places tak format karna
+    return price.toFixed(2);
+}
+
 export default function Portfolio({ token, isDarkMode }) {
     const [holdings, setHoldings] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,11 +35,11 @@ export default function Portfolio({ token, isDarkMode }) {
 
     const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
 
-    // --- REAL DATA FETCHING FUNCTION ---
-    const fetchPortfolio = async () => {
-        setLoading(true);
+    // --- REAL DATA FETCHING FUNCTION WITH BACKGROUND OPTION ---
+    const fetchPortfolio = async (isBackground = false) => {
+        if (!isBackground) setLoading(true); // Sirf pehli baar loading screen dikhayenge
+        
         try {
-            // Backend se real data call using dynamic API_URL
             const res = await axios.get(`${API_URL}/portfolio`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -45,22 +52,34 @@ export default function Portfolio({ token, isDarkMode }) {
 
         } catch (error) {
             console.error("Error fetching portfolio:", error);
-            // Optional: Error toast hata sakte hain agar baar baar aa raha ho
-            // toast.error("Failed to load portfolio data"); 
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
+    // --- POLLING LOGIC (Auto-Refresh) ---
     useEffect(() => { 
-        if(token) fetchPortfolio(); 
+        if(token) {
+            // 1. Initial Fetch (Page Load par)
+            fetchPortfolio(false); 
+
+            // 2. Polling setup: Har 5 second (5000ms) mein background mein refresh karo
+            const interval = setInterval(() => {
+                fetchPortfolio(true); 
+            }, 5000);
+
+            // Cleanup function: Component unmount hone par interval stop karo
+            return () => clearInterval(interval);
+        }
     }, [token]);
 
-    // Search Logic
+
+    // Search Logic (Same as before)
     useEffect(() => {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
                 try {
+                    // Search URL bhi API_URL se banao
                     const res = await axios.get(`${API_URL}/search-stock?query=${txn.symbol}`);
                     setSuggestions(res.data);
                 } catch (err) { console.error("Search failed"); }
@@ -91,7 +110,7 @@ export default function Portfolio({ token, isDarkMode }) {
             toast.success("Saved!", { id: tId });
             setShowBottomSheet(false);
             setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' });
-            fetchPortfolio(); // Data update after transaction
+            fetchPortfolio(false); // New transaction ke baad turant data fetch karo
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed", { id: tId });
         }
@@ -108,6 +127,7 @@ export default function Portfolio({ token, isDarkMode }) {
 
     // Calculations
     const totalInvested = holdings.reduce((acc, curr) => acc + (curr.quantity * curr.avg_price), 0);
+    // current_price ko formatPrice use karne se pehle number hona chahiye
     const currentValue = holdings.reduce((acc, curr) => acc + (curr.quantity * (curr.current_price || curr.avg_price)), 0); 
     const totalPnL = currentValue - totalInvested;
     const pnlPercentage = totalInvested > 0 ? ((totalPnL / totalInvested) * 100).toFixed(2) : 0;
@@ -145,11 +165,12 @@ export default function Portfolio({ token, isDarkMode }) {
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-[40px] -mr-5 -mt-5"></div>
                                 <div className="relative z-10">
                                     <span className="text-xs font-bold uppercase tracking-widest text-white/80 mb-1 block">Net Worth</span>
+                                    {/* Net Worth value ko format karna */}
                                     <h1 className="text-4xl font-black tracking-tight text-white mb-2">
-                                        ₹{currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                        ₹{formatPrice(currentValue)}
                                     </h1>
                                     <span className={`px-2 py-1 rounded-lg text-xs font-bold backdrop-blur-md border border-white/10 w-fit flex items-center gap-1 ${totalPnL >= 0 ? 'bg-emerald-400/20 text-emerald-100' : 'bg-red-400/20 text-red-100'}`}>
-                                        {totalPnL >= 0 ? '+' : ''}₹{Math.abs(totalPnL).toLocaleString()} ({pnlPercentage}%)
+                                        {totalPnL >= 0 ? '+' : ''}₹{formatPrice(Math.abs(totalPnL))} ({pnlPercentage}%)
                                     </span>
                                 </div>
                             </div>
@@ -160,7 +181,7 @@ export default function Portfolio({ token, isDarkMode }) {
                             }`}>
                                 <span className="text-xs font-bold uppercase tracking-widest opacity-50">Invested</span>
                                 <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
-                                    ₹{totalInvested.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    ₹{formatPrice(totalInvested)}
                                 </h2>
                                 
                                 {/* Multi-Color Progress Bar */}
@@ -206,7 +227,8 @@ export default function Portfolio({ token, isDarkMode }) {
                                         {holdings.length === 0 ? (
                                             <tr><td colSpan="5" className="p-12 text-center opacity-40">No positions found.</td></tr>
                                         ) : (
-                                            holdings.map((h, i) => <DesktopRow key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} />)
+                                            // DesktopRow mein formatPrice use kiya gaya hai
+                                            holdings.map((h, i) => <DesktopRow key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)
                                         )}
                                     </tbody>
                                 </table>
@@ -215,7 +237,8 @@ export default function Portfolio({ token, isDarkMode }) {
                             {/* Mobile List */}
                             <div className="md:hidden flex flex-col p-2 gap-2">
                                 {holdings.length === 0 && <p className="text-center p-8 opacity-40">No positions found.</p>}
-                                {holdings.map((h, i) => <MobileCard key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} />)}
+                                {/* MobileCard mein formatPrice use kiya gaya hai */}
+                                {holdings.map((h, i) => <MobileCard key={h._id || i} h={h} i={i} colors={colors} isDarkMode={isDarkMode} formatPrice={formatPrice} />)}
                             </div>
                         </div>
                     </div>
@@ -253,7 +276,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                                             <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{s.name}</span>
                                                         </div>
                                                         <div className="text-right">
-                                                            <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{s.current_price ? s.current_price.toLocaleString() : 'N/A'}</span>
+                                                            <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{formatPrice(s.current_price)}</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -297,7 +320,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                             {suggestions.map((s, idx) => (
                                                 <div key={idx} onClick={() => selectStock(s)} className="px-4 py-3 cursor-pointer flex justify-between items-center border-b dark:border-slate-700 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-900">
                                                     <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
-                                                    <span className="font-mono text-sm dark:text-white">₹{s.current_price}</span>
+                                                    <span className="font-mono text-sm dark:text-white">₹{formatPrice(s.current_price)}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -323,13 +346,14 @@ export default function Portfolio({ token, isDarkMode }) {
     );
 }
 
-// --- SUB COMPONENTS ---
+// --- SUB COMPONENTS (formatPrice prop receive kar rahe hain) ---
 
-function DesktopRow({ h, i, colors, isDarkMode }) {
+function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
     const ltp = h.current_price || h.avg_price || 0;
     const totalVal = h.quantity * ltp;
     const invested = h.quantity * h.avg_price;
     const pnl = totalVal - invested;
+    const pnlPercentage = invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0;
     
     return (
         <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
@@ -343,13 +367,13 @@ function DesktopRow({ h, i, colors, isDarkMode }) {
                 </div>
             </td>
             <td className={`p-5 text-center font-mono font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{h.quantity}</td>
-            <td className={`p-5 text-right font-mono ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>₹{h.avg_price.toLocaleString()}</td>
-            <td className={`p-5 text-right font-mono font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{ltp.toLocaleString()}</td>
+            <td className={`p-5 text-right font-mono ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>₹{formatPrice(h.avg_price)}</td>
+            <td className={`p-5 text-right font-mono font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{formatPrice(ltp)}</td>
             <td className="p-5 text-right pr-6">
                 <div className="flex flex-col items-end">
-                    <span className={`font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{totalVal.toLocaleString()}</span>
+                    <span className={`font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{formatPrice(totalVal)}</span>
                     <span className={`text-[10px] font-bold ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {pnl >= 0 ? '+' : ''}{invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0}%
+                        {pnl >= 0 ? '+' : ''}{pnlPercentage}%
                     </span>
                 </div>
             </td>
@@ -357,11 +381,12 @@ function DesktopRow({ h, i, colors, isDarkMode }) {
     );
 }
 
-function MobileCard({ h, i, colors, isDarkMode }) {
+function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
     const ltp = h.current_price || h.avg_price || 0;
     const totalVal = h.quantity * ltp;
     const invested = h.quantity * h.avg_price;
     const pnl = totalVal - invested;
+    const pnlPercentage = invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0;
 
     return (
         <div className={`p-4 rounded-2xl border flex flex-col gap-3 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}>
@@ -374,16 +399,16 @@ function MobileCard({ h, i, colors, isDarkMode }) {
                     </div>
                 </div>
                 <div className="text-right">
-                    <span className={`block font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{totalVal.toLocaleString()}</span>
+                    <span className={`block font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{formatPrice(totalVal)}</span>
                     <span className={`text-xs font-bold ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {pnl >= 0 ? '+' : ''}{invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0}%
+                        {pnl >= 0 ? '+' : ''}{pnlPercentage}%
                     </span>
                 </div>
             </div>
             <div className={`flex justify-between items-center pt-3 border-t text-xs font-mono ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-500'}`}>
                 <span>Qty: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.quantity}</b></span>
-                <span>Avg: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{h.avg_price}</b></span>
-                <span>LTP: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>{ltp}</b></span>
+                <span>Avg: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>₹{formatPrice(h.avg_price)}</b></span>
+                <span>LTP: <b className={isDarkMode ? 'text-white' : 'text-slate-800'}>₹{formatPrice(ltp)}</b></span>
             </div>
         </div>
     );
