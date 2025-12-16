@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // useRef bhi import kiya
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'react-hot-toast';
@@ -32,7 +32,7 @@ export default function Portfolio({ token, isDarkMode }) {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // Ref to keep track if we are currently fetching names to avoid duplicates
+    // Ref to prevent duplicate name fetching
     const fetchingNamesRef = useRef(false);
 
     const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
@@ -47,23 +47,24 @@ export default function Portfolio({ token, isDarkMode }) {
             
             const rawData = Array.isArray(res.data) ? res.data : (res.data.holdings || []);
 
-            // --- CRITICAL FIX: MERGE OLD NAMES WITH NEW DATA ---
+            // --- CRITICAL FIX: Merge new price data with existing names ---
             setHoldings(prevHoldings => {
                 const mergedData = rawData.map(newItem => {
-                    // Check if we already have this stock in our state
                     const existingItem = prevHoldings.find(p => p.symbol === newItem.symbol);
                     
-                    // Agar naye data mein naam nahi hai, to purana naam use karo
-                    // Agar purana bhi nahi hai, to 'N/A' mat likho, undefined rehne do taaki fetcher pakad sake
-                    const smartName = newItem.name || (existingItem ? existingItem.name : undefined);
+                    // If backend sends empty name, try to use the one we already have in state
+                    let smartName = newItem.name;
+                    if ((!smartName || smartName === 'N/A') && existingItem && existingItem.name && existingItem.name !== 'N/A' && existingItem.name !== 'Loading...') {
+                        smartName = existingItem.name;
+                    }
 
                     return {
                         ...newItem,
-                        name: smartName
+                        name: smartName // Use preserved name
                     };
                 });
 
-                // Ab check karo kiske paas naam nahi hai, aur unhe fetch karo
+                // Trigger name fetch for any remaining missing names
                 fetchMissingNames(mergedData);
                 
                 return mergedData;
@@ -78,28 +79,22 @@ export default function Portfolio({ token, isDarkMode }) {
 
     // --- 2. SMART NAME FETCHER ---
     const fetchMissingNames = async (currentHoldings) => {
-        // Agar pehle se fetching chal rahi hai to ruk jao (avoid flooding)
         if (fetchingNamesRef.current) return;
 
-        // Sirf wo stocks nikalo jinka naam missing hai
         const stocksMissingNames = currentHoldings.filter(h => !h.name || h.name === 'N/A' || h.name === 'Loading...');
 
         if (stocksMissingNames.length === 0) return;
 
         fetchingNamesRef.current = true;
-
-        // Ek naya array copy banao update karne ke liye
         let newHoldingsState = [...currentHoldings];
         let hasUpdates = false;
 
         for (const stock of stocksMissingNames) {
             try {
-                // Search API call
                 const res = await axios.get(`${API_URL}/search-stock?query=${stock.symbol}`);
                 if (res.data && res.data.length > 0) {
                     const match = res.data.find(s => s.symbol === stock.symbol);
                     if (match && match.name) {
-                        // Main list mein naam update karo
                         newHoldingsState = newHoldingsState.map(h => 
                             h.symbol === stock.symbol ? { ...h, name: match.name } : h
                         );
@@ -111,7 +106,6 @@ export default function Portfolio({ token, isDarkMode }) {
             }
         }
 
-        // Agar kuch update hua hai to state set karo
         if (hasUpdates) {
             setHoldings(newHoldingsState);
         }
@@ -123,7 +117,6 @@ export default function Portfolio({ token, isDarkMode }) {
     useEffect(() => { 
         if(token) {
             fetchPortfolio(false); 
-            // 5 second interval
             const interval = setInterval(() => fetchPortfolio(true), 5000); 
             return () => clearInterval(interval);
         }
@@ -184,7 +177,6 @@ export default function Portfolio({ token, isDarkMode }) {
         if (!h) return false; 
         const lowerSearchTerm = searchTerm.toLowerCase();
         const symbolMatch = (h.symbol || '').toLowerCase().includes(lowerSearchTerm);
-        // Fallback to empty string to prevent crash
         const nameMatch = (h.name || '').toLowerCase().includes(lowerSearchTerm);
         return symbolMatch || nameMatch;
     });
@@ -290,6 +282,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                             <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-[#0B0F19] border-slate-700' : 'bg-white border-slate-200'}`}>
                                                 {suggestions.map((s, idx) => (
                                                     <div key={idx} onClick={() => selectStock(s)} className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}>
+                                                        {/* --- DESKTOP QUICK TRADE SUGGESTION EXPLICIT STRUCTURE --- */}
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                             <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.name || 'N/A'}</span>
@@ -333,6 +326,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                         <div className={`absolute left-0 right-0 top-[110%] rounded-xl shadow-xl border z-50 max-h-48 overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
                                             {suggestions.map((s, idx) => (
                                                 <div key={idx} onClick={() => selectStock(s)} className="px-4 py-3 cursor-pointer flex justify-between items-center border-b dark:border-slate-700 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-900">
+                                                    {/* --- MOBILE SUGGESTION EXPLICIT STRUCTURE --- */}
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-bold text-indigo-500 text-sm">{s.symbol}</span>
                                                         <span className={`text-[10px] font-medium uppercase tracking-wide truncate max-w-[150px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.name || 'N/A'}</span>
@@ -370,8 +364,7 @@ function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
     const pnl = totalVal - invested;
     const pnlPercentage = invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0;
     
-    // Fallback: Agar naam 'N/A' ya undefined hai, to "Loading..." dikhao taaki user ko lage process chal raha hai
-    // Ya agar data fetch ho gaya aur naam nahi mila to "N/A"
+    // Use stored name or "Loading..." (never N/A for display in table)
     const displayName = (h.name && h.name !== 'N/A') ? h.name : 'Loading...';
 
     return (
