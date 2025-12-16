@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // useRef bhi import kiya
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'react-hot-toast';
@@ -32,9 +32,12 @@ export default function Portfolio({ token, isDarkMode }) {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
+    // Ref to keep track if we are currently fetching names to avoid duplicates
+    const fetchingNamesRef = useRef(false);
+
     const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
 
-    // --- 1. FETCH PORTFOLIO ---
+    // --- 1. SMART FETCH PORTFOLIO (WITH MERGE LOGIC) ---
     const fetchPortfolio = async (isBackground = false) => {
         if (!isBackground) setLoading(true); 
         try {
@@ -43,10 +46,28 @@ export default function Portfolio({ token, isDarkMode }) {
             });
             
             const rawData = Array.isArray(res.data) ? res.data : (res.data.holdings || []);
-            setHoldings(rawData);
-            
-            // Background fetch khatam hone ke baad missing names check karo
-            if(!isBackground) fetchMissingNames(rawData);
+
+            // --- CRITICAL FIX: MERGE OLD NAMES WITH NEW DATA ---
+            setHoldings(prevHoldings => {
+                const mergedData = rawData.map(newItem => {
+                    // Check if we already have this stock in our state
+                    const existingItem = prevHoldings.find(p => p.symbol === newItem.symbol);
+                    
+                    // Agar naye data mein naam nahi hai, to purana naam use karo
+                    // Agar purana bhi nahi hai, to 'N/A' mat likho, undefined rehne do taaki fetcher pakad sake
+                    const smartName = newItem.name || (existingItem ? existingItem.name : undefined);
+
+                    return {
+                        ...newItem,
+                        name: smartName
+                    };
+                });
+
+                // Ab check karo kiske paas naam nahi hai, aur unhe fetch karo
+                fetchMissingNames(mergedData);
+                
+                return mergedData;
+            });
 
         } catch (error) {
             console.error("Error fetching portfolio:", error);
@@ -55,50 +76,60 @@ export default function Portfolio({ token, isDarkMode }) {
         }
     };
 
-    // --- 2. SMART NAME FETCHER (Jugaad for N/A) ---
-    // Agar backend name nahi bhej raha, to hum frontend se search API call karke name layenge
+    // --- 2. SMART NAME FETCHER ---
     const fetchMissingNames = async (currentHoldings) => {
-        const updatedHoldings = [...currentHoldings];
-        let hasChanges = false;
+        // Agar pehle se fetching chal rahi hai to ruk jao (avoid flooding)
+        if (fetchingNamesRef.current) return;
 
-        // Sirf un stocks ko dhoondo jinka naam missing hai
-        for (let i = 0; i < updatedHoldings.length; i++) {
-            const stock = updatedHoldings[i];
-            
-            if (!stock.name || stock.name === 'N/A') {
-                try {
-                    // Search API call karo usi symbol ke liye
-                    const res = await axios.get(`${API_URL}/search-stock?query=${stock.symbol}`);
-                    if (res.data && res.data.length > 0) {
-                        // Pehla matching result uthao
-                        const match = res.data.find(s => s.symbol === stock.symbol);
-                        if (match && match.name) {
-                            updatedHoldings[i] = { ...stock, name: match.name };
-                            hasChanges = true;
-                        }
+        // Sirf wo stocks nikalo jinka naam missing hai
+        const stocksMissingNames = currentHoldings.filter(h => !h.name || h.name === 'N/A' || h.name === 'Loading...');
+
+        if (stocksMissingNames.length === 0) return;
+
+        fetchingNamesRef.current = true;
+
+        // Ek naya array copy banao update karne ke liye
+        let newHoldingsState = [...currentHoldings];
+        let hasUpdates = false;
+
+        for (const stock of stocksMissingNames) {
+            try {
+                // Search API call
+                const res = await axios.get(`${API_URL}/search-stock?query=${stock.symbol}`);
+                if (res.data && res.data.length > 0) {
+                    const match = res.data.find(s => s.symbol === stock.symbol);
+                    if (match && match.name) {
+                        // Main list mein naam update karo
+                        newHoldingsState = newHoldingsState.map(h => 
+                            h.symbol === stock.symbol ? { ...h, name: match.name } : h
+                        );
+                        hasUpdates = true;
                     }
-                } catch (err) {
-                    console.error(`Failed to fetch name for ${stock.symbol}`);
                 }
+            } catch (err) {
+                console.error(`Name fetch failed for ${stock.symbol}`);
             }
         }
 
-        // Agar humne koi naam naya dhoondha hai, to state update karo
-        if (hasChanges) {
-            setHoldings(updatedHoldings);
+        // Agar kuch update hua hai to state set karo
+        if (hasUpdates) {
+            setHoldings(newHoldingsState);
         }
+        
+        fetchingNamesRef.current = false;
     };
 
     // --- POLLING ---
     useEffect(() => { 
         if(token) {
             fetchPortfolio(false); 
+            // 5 second interval
             const interval = setInterval(() => fetchPortfolio(true), 5000); 
             return () => clearInterval(interval);
         }
     }, [token]);
 
-    // --- SEARCH LOGIC ---
+    // --- SEARCH LOGIC (Quick Trade) ---
     useEffect(() => {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
@@ -153,7 +184,7 @@ export default function Portfolio({ token, isDarkMode }) {
         if (!h) return false; 
         const lowerSearchTerm = searchTerm.toLowerCase();
         const symbolMatch = (h.symbol || '').toLowerCase().includes(lowerSearchTerm);
-        // Ab yahan naam bhi search mein aayega kyunki humne fetchMissingNames use kiya hai
+        // Fallback to empty string to prevent crash
         const nameMatch = (h.name || '').toLowerCase().includes(lowerSearchTerm);
         return symbolMatch || nameMatch;
     });
@@ -339,6 +370,10 @@ function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
     const pnl = totalVal - invested;
     const pnlPercentage = invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0;
     
+    // Fallback: Agar naam 'N/A' ya undefined hai, to "Loading..." dikhao taaki user ko lage process chal raha hai
+    // Ya agar data fetch ho gaya aur naam nahi mila to "N/A"
+    const displayName = (h.name && h.name !== 'N/A') ? h.name : 'Loading...';
+
     return (
         <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
             <td className="p-5 pl-6">
@@ -346,7 +381,7 @@ function DesktopRow({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-2 h-8 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name || 'Loading...'}</p>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{displayName}</p>
                     </div>
                 </div>
             </td>
@@ -371,6 +406,7 @@ function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
     const invested = h.quantity * h.avg_price;
     const pnl = totalVal - invested;
     const pnlPercentage = invested > 0 ? ((pnl/invested)*100).toFixed(2) : 0;
+    const displayName = (h.name && h.name !== 'N/A') ? h.name : 'Loading...';
 
     return (
         <div className={`p-4 rounded-2xl border flex flex-col gap-3 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}>
@@ -379,7 +415,7 @@ function MobileCard({ h, i, colors, isDarkMode, formatPrice }) {
                     <div className={`w-1.5 h-10 rounded-full ${colors[i % colors.length]}`}></div>
                     <div>
                         <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                        <p className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name || 'Loading...'}</p>
+                        <p className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{displayName}</p>
                     </div>
                 </div>
                 <div className="text-right">
