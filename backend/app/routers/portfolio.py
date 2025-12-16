@@ -14,22 +14,29 @@ class Transaction(BaseModel):
     price: float
     type: str = "BUY"
 
-# --- ✅ NEW HELPER: Get Price AND Name ---
+# --- Helper to get Live Price AND Name ---
 def get_live_data(symbol):
     try:
-        # NSE symbol adjust karo
+        # NSE symbol conversion logic
         ticker_symbol = f"{symbol}.NS" if not symbol.endswith(".NS") and not symbol.endswith(".BO") else symbol
         
         stock = yf.Ticker(ticker_symbol)
         
-        # 1. Price nikalo
-        hist = stock.history(period="1d")
-        current_price = hist["Close"].iloc[-1] if not hist.empty else 0.0
-        
-        # 2. Company Name nikalo (yf.info se)
-        # Agar naam na mile to Symbol hi wapas kar do fallback ke liye
-        company_name = stock.info.get('longName', symbol)
-        
+        # 1. Get Price History
+        data = stock.history(period="1d")
+        current_price = 0.0
+        if not data.empty:
+            current_price = data["Close"].iloc[-1]
+
+        # 2. Get Company Name (Metadata)
+        # Note: .info call thoda slow ho sakta hai, isliye hum isse try block me rakhte hain
+        company_name = symbol # Default fallback is Symbol itself
+        try:
+            if 'longName' in stock.info:
+                company_name = stock.info['longName']
+        except:
+            pass # Agar info fetch fail ho jaye to Symbol hi naam rahega
+
         return {"price": current_price, "name": company_name}
 
     except Exception as e:
@@ -47,22 +54,27 @@ async def get_portfolio(user=Depends(get_current_user)):
     holdings = await cursor.to_list(length=100)
     
     updated_holdings = []
+    
     for h in holdings:
-        # ✅ Ab hum Price aur Name dono layenge
+        # Live Data (Price + Name) fetch karein
         live_data = get_live_data(h["symbol"])
         
-        if live_data:
-            h["current_price"] = live_data["price"]
-            
-            # Agar database me pehle se naam saved nahi hai, to live data wala naam use karo
-            if "name" not in h or not h["name"]:
-                h["name"] = live_data["name"]
-        else:
-            # Fallback agar API fail ho jaye
-            h["current_price"] = h["avg_price"]
-            h["name"] = h["symbol"] # Name nahi mila to symbol dikhao
+        # Default values agar API fail ho
+        final_price = h["avg_price"]
+        final_name = h.get("name", h["symbol"]) # Agar DB me name hai to wo lo, nahi to symbol
 
+        if live_data:
+            final_price = live_data["price"] if live_data["price"] > 0 else h["avg_price"]
+            
+            # AGAR Database me Name missing hai (Purane records ke liye), to Live API wala name use karo
+            if "name" not in h or h["name"] is None:
+                final_name = live_data["name"]
+
+        # Data structure update karein
+        h["current_price"] = final_price
+        h["name"] = final_name  # <-- YAHAN NAME ADD KIYA
         h["_id"] = str(h["_id"]) 
+        
         updated_holdings.append(h)
         
     return updated_holdings
@@ -75,32 +87,28 @@ async def add_transaction(txn: Transaction, user=Depends(get_current_user)):
     email = user["email"]
     existing = await database.db.portfolio.find_one({"email": email, "symbol": txn.symbol})
 
-    # ✅ Transaction ke time hi Name fetch karke DB me save kar lo
-    # Isse portfolio load fast hoga agli baar
-    company_name = txn.symbol # Default
-    try:
-        live_data = get_live_data(txn.symbol)
-        if live_data:
-            company_name = live_data["name"]
-    except:
-        pass
-
     if txn.type == "BUY":
         if existing:
             new_qty = existing["quantity"] + txn.quantity
             total_cost = (existing["quantity"] * existing["avg_price"]) + (txn.quantity * txn.price)
             new_avg = total_cost / new_qty
             
-            # Update karte waqt naam bhi ensure kar lo
+            # Update karte waqt agar pehle name nahi tha, to ab save karne ki koshish nahi kar rahe 
+            # kyunki wo slow ho jayega. Read time pe handle kar lenge.
             await database.db.portfolio.update_one(
                 {"_id": existing["_id"]},
-                {"$set": {"quantity": new_qty, "avg_price": new_avg, "name": company_name}}
+                {"$set": {"quantity": new_qty, "avg_price": new_avg}}
             )
         else:
+            # --- NEW HOLDING LOGIC ---
+            # Jab pehli baar share khareed rahe hain, tabhi NAAM fetch karke DB me save kar lo
+            live_data = get_live_data(txn.symbol)
+            company_name = live_data["name"] if live_data else txn.symbol
+
             new_holding = {
                 "email": email,
                 "symbol": txn.symbol,
-                "name": company_name, # ✅ DB me Name save kar rahe hain
+                "name": company_name, # ✅ Saving Name permanently to DB
                 "quantity": txn.quantity,
                 "avg_price": txn.price,
                 "created_at": datetime.utcnow()
