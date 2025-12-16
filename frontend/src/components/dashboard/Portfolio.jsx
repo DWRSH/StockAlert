@@ -340,7 +340,7 @@ function TradeForm({ txn, setTxn, handleTransaction, showSuggestions, setShowSug
             <div className="relative">
                 <label className={`text-xs font-bold uppercase tracking-wider mb-1.5 block ml-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Stock Symbol</label>
                 <input 
-                    type="text" placeholder="RELIANCE" value={txn.symbol}
+                    type="text" placeholder="Search Stock" value={txn.symbol}
                     onChange={e => { setTxn({...txn, symbol: e.target.value.toUpperCase()}); setShowSuggestions(true); }}
                     onFocus={() => setShowSuggestions(true)}
                     className={`w-full px-4 py-3 rounded-xl border text-sm font-bold outline-none transition-all uppercase focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-950 border-slate-700 focus:border-indigo-500 text-white placeholder-slate-600' : 'bg-white border-slate-300 focus:border-indigo-500 text-slate-900 placeholder-slate-400'}`} 
