@@ -42,8 +42,8 @@ export default function Portfolio({ token, isDarkMode }) {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const fetchingNamesRef = useRef(false);
 
-    // Chart Colors
-    const colors = ['bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500', 'bg-pink-500', 'bg-rose-500'];
+    // Modern Colors matching the gradient in sidebar
+    const colors = ['bg-indigo-500', 'bg-purple-500', 'bg-blue-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500'];
 
     // --- FETCH LOGIC ---
     const fetchPortfolio = async (isBackground = false) => {
@@ -120,7 +120,6 @@ export default function Portfolio({ token, isDarkMode }) {
     const totalPnL = currentValue - totalInvested;
     const pnlPercentage = totalInvested > 0 ? ((totalPnL / totalInvested) * 100).toFixed(2) : 0;
     
-    // Improved Filter Logic for searching by Name or Symbol
     const filteredHoldings = holdings.filter(h => {
         if (!h) return false; 
         const lowerSearch = searchTerm.toLowerCase();
@@ -132,28 +131,28 @@ export default function Portfolio({ token, isDarkMode }) {
     if (loading) return <PortfolioSkeleton isDarkMode={isDarkMode} />;
 
     return (
-        // BG-GRAY-100 instead of 50 for better contrast in light mode
-        <div className={`min-h-screen w-full font-sans ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-gray-100 text-gray-900'}`}>
+        // THEME UPDATE: Using Slate-50 and Slate-950 to match Sidebar
+        <div className={`min-h-screen w-full font-sans transition-colors duration-300 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
             <Toaster position="bottom-right" />
             
             {/* --- HEADER --- */}
-            <div className={`w-full px-4 sm:px-6 lg:px-8 py-5 border-b sticky top-0 z-30 backdrop-blur-md ${isDarkMode ? 'border-zinc-800 bg-zinc-950/80' : 'border-gray-200 bg-white/80'}`}>
+            <div className={`w-full px-4 sm:px-6 lg:px-8 py-5 border-b sticky top-0 z-30 backdrop-blur-md ${isDarkMode ? 'border-slate-800 bg-slate-950/80' : 'border-slate-200 bg-white/80'}`}>
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Portfolio</h1>
-                        <p className={`text-sm mt-0.5 font-medium ${isDarkMode ? 'text-zinc-400' : 'text-gray-500'}`}>Track your investments</p>
+                        <p className={`text-sm mt-0.5 font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Track your investments</p>
                     </div>
                     
                     <div className="hidden md:flex items-center gap-3">
                         <div className="relative">
                             <input 
                                 type="text" 
-                                placeholder="Search holdings..." 
+                                placeholder="Filter holdings..." 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`pl-9 pr-4 py-2.5 rounded-lg text-sm border font-medium outline-none w-64 transition-all focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-zinc-900 border-zinc-800 focus:border-indigo-500 text-white placeholder-zinc-500' : 'bg-white border-gray-300 focus:border-indigo-500 text-gray-900 placeholder-gray-400'}`}
+                                className={`pl-9 pr-4 py-2.5 rounded-lg text-sm border font-medium outline-none w-64 transition-all focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-900 border-slate-700 focus:border-indigo-500 text-white placeholder-slate-500' : 'bg-white border-slate-300 focus:border-indigo-500 text-slate-900 placeholder-slate-400'}`}
                             />
-                            <Icons.Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'}`} />
+                            <Icons.Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
                         </div>
                     </div>
 
@@ -170,23 +169,23 @@ export default function Portfolio({ token, isDarkMode }) {
                     <div className="lg:col-span-2 space-y-6">
                         
                         {/* Summary Card */}
-                        <div className={`rounded-xl border p-6 sm:p-8 ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+                        <div className={`rounded-xl border p-6 sm:p-8 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm shadow-slate-200'}`}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
-                                    <p className={`text-sm font-semibold uppercase tracking-wider ${isDarkMode ? 'text-zinc-500' : 'text-gray-500'}`}>Total Valuation</p>
+                                    <p className={`text-xs font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Total Valuation</p>
                                     <div className="flex items-baseline gap-2 mt-2">
-                                        <h2 className="text-4xl font-bold tracking-tight">₹{formatPrice(currentValue)}</h2>
+                                        <h2 className={`text-4xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>₹{formatPrice(currentValue)}</h2>
                                     </div>
-                                    <div className={`mt-3 inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold ${totalPnL >= 0 ? 'text-emerald-700 bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400' : 'text-red-700 bg-red-100 dark:bg-red-500/10 dark:text-red-400'}`}>
+                                    <div className={`mt-3 inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold border ${totalPnL >= 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
                                         {totalPnL >= 0 ? '+' : ''}₹{formatPrice(Math.abs(totalPnL))} ({pnlPercentage}%)
                                     </div>
                                 </div>
                                 <div className="flex flex-col justify-end">
-                                    <div className="flex justify-between text-sm mb-2 font-medium">
-                                        <span className={isDarkMode ? 'text-zinc-400' : 'text-gray-600'}>Invested Amount</span>
-                                        <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>₹{formatPrice(totalInvested)}</span>
+                                    <div className="flex justify-between text-sm mb-2 font-bold">
+                                        <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Invested</span>
+                                        <span className={`font-mono ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>₹{formatPrice(totalInvested)}</span>
                                     </div>
-                                    <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-gray-100 dark:bg-zinc-800 border dark:border-zinc-700 border-gray-200">
+                                    <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800">
                                         {holdings.map((h, i) => {
                                             const width = totalInvested > 0 ? (h.quantity * h.avg_price / totalInvested) * 100 : 0;
                                             return <div key={i} style={{ width: `${width}%` }} className={colors[i % colors.length]} />;
@@ -197,19 +196,19 @@ export default function Portfolio({ token, isDarkMode }) {
                         </div>
 
                         {/* Holdings Table */}
-                        <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-                            <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-zinc-800' : 'border-gray-200'}`}>
-                                <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Holdings ({filteredHoldings.length})</h3>
+                        <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm shadow-slate-200'}`}>
+                            <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                                <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Holdings ({filteredHoldings.length})</h3>
                                 <div className="md:hidden relative w-40">
-                                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`w-full pl-8 pr-2 py-1.5 text-xs font-medium rounded border bg-transparent ${isDarkMode ? 'border-zinc-700 text-white placeholder-zinc-600' : 'border-gray-300 text-gray-900 placeholder-gray-500'}`} />
-                                    <Icons.Search className={`w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-zinc-600' : 'text-gray-400'}`} />
+                                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`w-full pl-8 pr-2 py-1.5 text-xs font-medium rounded border bg-transparent outline-none ${isDarkMode ? 'border-slate-700 text-white placeholder-slate-600' : 'border-slate-300 text-slate-900 placeholder-slate-500'}`} />
+                                    <Icons.Search className={`w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`} />
                                 </div>
                             </div>
                             
                             {/* Desktop Table */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
-                                    <thead className={`text-xs uppercase font-bold tracking-wider ${isDarkMode ? 'bg-zinc-950/50 text-zinc-500' : 'bg-gray-50 text-gray-600'}`}>
+                                    <thead className={`text-xs uppercase font-bold tracking-wider ${isDarkMode ? 'bg-slate-950/50 text-slate-500' : 'bg-slate-50 text-slate-500'}`}>
                                         <tr>
                                             <th className="px-5 py-4 pl-6">Instrument</th>
                                             <th className="px-5 py-4 text-right">Qty</th>
@@ -218,28 +217,28 @@ export default function Portfolio({ token, isDarkMode }) {
                                             <th className="px-5 py-4 text-right pr-6">Value (P&L)</th>
                                         </tr>
                                     </thead>
-                                    <tbody className={`divide-y ${isDarkMode ? 'divide-zinc-800' : 'divide-gray-100'}`}>
+                                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
                                         {filteredHoldings.length === 0 ? (
-                                            <tr><td colSpan="5" className="p-8 text-center opacity-50 text-sm font-medium">No assets found matching your search.</td></tr>
+                                            <tr><td colSpan="5" className="p-8 text-center opacity-50 text-sm font-medium">No assets found.</td></tr>
                                         ) : (
                                             filteredHoldings.map((h, i) => (
-                                                <tr key={i} className={`group transition-colors ${isDarkMode ? 'hover:bg-zinc-800/50' : 'hover:bg-gray-50'}`}>
+                                                <tr key={i} className={`group transition-colors ${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
                                                     <td className="px-5 py-4 pl-6">
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`w-1.5 h-8 rounded-full ${colors[i % colors.length]}`}></div>
+                                                            <div className={`w-2 h-8 rounded-r-full ${colors[i % colors.length]}`}></div>
                                                             <div>
-                                                                <span className={`font-bold block ${isDarkMode ? 'text-zinc-100' : 'text-gray-900'}`}>{h.symbol}</span>
-                                                                <span className={`text-xs font-medium truncate max-w-[150px] block ${isDarkMode ? 'text-zinc-500' : 'text-gray-500'}`}>{h.name || 'N/A'}</span>
+                                                                <span className={`font-bold block ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{h.symbol}</span>
+                                                                <span className={`text-xs font-medium truncate max-w-[150px] block ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name || 'N/A'}</span>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className={`px-5 py-4 text-right tabular-nums font-medium ${isDarkMode ? 'text-zinc-300' : 'text-gray-700'}`}>{h.quantity}</td>
-                                                    <td className={`px-5 py-4 text-right tabular-nums font-medium ${isDarkMode ? 'text-zinc-300' : 'text-gray-700'}`}>₹{formatPrice(h.avg_price)}</td>
-                                                    <td className={`px-5 py-4 text-right tabular-nums font-bold ${isDarkMode ? 'text-zinc-100' : 'text-gray-900'}`}>₹{formatPrice(h.current_price || h.avg_price)}</td>
+                                                    <td className={`px-5 py-4 text-right tabular-nums font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{h.quantity}</td>
+                                                    <td className={`px-5 py-4 text-right tabular-nums font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>₹{formatPrice(h.avg_price)}</td>
+                                                    <td className={`px-5 py-4 text-right tabular-nums font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>₹{formatPrice(h.current_price || h.avg_price)}</td>
                                                     <td className="px-5 py-4 text-right pr-6">
                                                         <div className="flex flex-col items-end">
-                                                            <span className={`font-bold tabular-nums ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>₹{formatPrice(h.quantity * (h.current_price || h.avg_price))}</span>
-                                                            <span className={`text-xs font-bold mt-0.5 ${(h.quantity * (h.current_price || h.avg_price)) - (h.quantity * h.avg_price) >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
+                                                            <span className={`font-bold tabular-nums ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{formatPrice(h.quantity * (h.current_price || h.avg_price))}</span>
+                                                            <span className={`text-xs font-bold mt-0.5 ${(h.quantity * (h.current_price || h.avg_price)) - (h.quantity * h.avg_price) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                                 {((h.quantity * (h.current_price || h.avg_price)) - (h.quantity * h.avg_price)) >= 0 ? '+' : ''}
                                                                 {(((h.quantity * (h.current_price || h.avg_price)) - (h.quantity * h.avg_price)) / (h.quantity * h.avg_price) * 100).toFixed(2)}%
                                                             </span>
@@ -253,31 +252,31 @@ export default function Portfolio({ token, isDarkMode }) {
                             </div>
                             
                             {/* Mobile List View */}
-                            <div className="md:hidden divide-y dark:divide-zinc-800">
+                            <div className="md:hidden divide-y dark:divide-slate-800">
                                 {filteredHoldings.map((h, i) => (
-                                    <div key={i} className="p-4 active:bg-gray-50 dark:active:bg-zinc-800/50">
+                                    <div key={i} className="p-4 active:bg-slate-50 dark:active:bg-slate-800/50">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${colors[i % colors.length]}`}>
                                                     {h.symbol.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{h.symbol}</h4>
-                                                    <p className={`text-xs font-medium truncate max-w-[120px] ${isDarkMode ? 'text-zinc-500' : 'text-gray-500'}`}>{h.name}</p>
+                                                    <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
+                                                    <p className={`text-xs font-medium truncate max-w-[120px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <div className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>₹{formatPrice(h.quantity * (h.current_price || h.avg_price))}</div>
-                                                <div className={`text-xs font-bold ${(h.quantity * (h.current_price || h.avg_price)) - (h.quantity * h.avg_price) >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
+                                                <div className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>₹{formatPrice(h.quantity * (h.current_price || h.avg_price))}</div>
+                                                <div className={`text-xs font-bold ${(h.quantity * (h.current_price || h.avg_price)) - (h.quantity * h.avg_price) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                     {((h.quantity * (h.current_price || h.avg_price)) - (h.quantity * h.avg_price)) >= 0 ? '+' : ''}
                                                     {(((h.quantity * (h.current_price || h.avg_price)) - (h.quantity * h.avg_price)) / (h.quantity * h.avg_price) * 100).toFixed(2)}%
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className={`flex justify-between text-xs font-medium p-2.5 rounded-lg ${isDarkMode ? 'bg-zinc-950 text-zinc-400' : 'bg-gray-100 text-gray-600'}`}>
-                                            <span>Qty: <span className={isDarkMode ? 'text-zinc-200' : 'text-gray-900'}>{h.quantity}</span></span>
-                                            <span>Avg: <span className={isDarkMode ? 'text-zinc-200' : 'text-gray-900'}>{formatPrice(h.avg_price)}</span></span>
-                                            <span>LTP: <span className={isDarkMode ? 'text-zinc-200' : 'text-gray-900'}>{formatPrice(h.current_price || h.avg_price)}</span></span>
+                                        <div className={`flex justify-between text-xs font-medium p-2.5 rounded-lg ${isDarkMode ? 'bg-slate-950 text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+                                            <span>Qty: <span className={isDarkMode ? 'text-slate-200' : 'text-slate-900'}>{h.quantity}</span></span>
+                                            <span>Avg: <span className={isDarkMode ? 'text-slate-200' : 'text-slate-900'}>{formatPrice(h.avg_price)}</span></span>
+                                            <span>LTP: <span className={isDarkMode ? 'text-slate-200' : 'text-slate-900'}>{formatPrice(h.current_price || h.avg_price)}</span></span>
                                         </div>
                                     </div>
                                 ))}
@@ -287,12 +286,12 @@ export default function Portfolio({ token, isDarkMode }) {
 
                     {/* --- RIGHT COLUMN (Actions) --- */}
                     <div className="hidden lg:block space-y-6">
-                        <div className={`sticky top-24 rounded-xl border p-6 ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200 shadow-lg shadow-gray-100'}`}>
-                            <div className={`flex items-center gap-2 mb-6 pb-4 border-b ${isDarkMode ? 'border-zinc-800' : 'border-gray-100'}`}>
+                        <div className={`sticky top-24 rounded-xl border p-6 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-lg shadow-indigo-100'}`}>
+                            <div className={`flex items-center gap-2 mb-6 pb-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
                                 <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg text-indigo-600 dark:text-indigo-400">
                                     <Icons.Wallet className="w-5 h-5" />
                                 </div>
-                                <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Quick Trade</h3>
+                                <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Quick Trade</h3>
                             </div>
                             
                             <TradeForm 
@@ -313,9 +312,9 @@ export default function Portfolio({ token, isDarkMode }) {
                 {showBottomSheet && (
                     <>
                         <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setShowBottomSheet(false)} className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm" />
-                        <motion.div initial={{y:"100%"}} animate={{y:0}} exit={{y:"100%"}} transition={{type:"spring", damping:25}} className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl p-6 shadow-2xl ${isDarkMode ? 'bg-zinc-900 border-t border-zinc-800' : 'bg-white'}`}>
-                            <div className={`w-12 h-1.5 rounded-full mx-auto mb-6 ${isDarkMode ? 'bg-zinc-700' : 'bg-gray-300'}`} />
-                            <h3 className={`font-bold text-xl mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>New Transaction</h3>
+                        <motion.div initial={{y:"100%"}} animate={{y:0}} exit={{y:"100%"}} transition={{type:"spring", damping:25}} className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl p-6 shadow-2xl ${isDarkMode ? 'bg-slate-900 border-t border-slate-800' : 'bg-white'}`}>
+                            <div className={`w-12 h-1.5 rounded-full mx-auto mb-6 ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`} />
+                            <h3 className={`font-bold text-xl mb-6 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>New Transaction</h3>
                             <TradeForm txn={txn} setTxn={setTxn} handleTransaction={handleTransaction} showSuggestions={showSuggestions} setShowSuggestions={setShowSuggestions} suggestions={suggestions} isDarkMode={isDarkMode} />
                         </motion.div>
                     </>
@@ -335,26 +334,26 @@ function TradeForm({ txn, setTxn, handleTransaction, showSuggestions, setShowSug
     return (
         <form onSubmit={handleTransaction} className="flex flex-col gap-5">
             <div className="relative">
-                <label className={`text-xs font-bold uppercase tracking-wider mb-1.5 block ml-1 ${isDarkMode ? 'text-zinc-500' : 'text-gray-500'}`}>Stock Symbol</label>
+                <label className={`text-xs font-bold uppercase tracking-wider mb-1.5 block ml-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Stock Symbol</label>
                 <input 
                     type="text" placeholder="e.g. RELIANCE" value={txn.symbol}
                     onChange={e => { setTxn({...txn, symbol: e.target.value.toUpperCase()}); setShowSuggestions(true); }}
                     onFocus={() => setShowSuggestions(true)}
-                    className={`w-full px-4 py-3 rounded-xl border text-sm font-bold outline-none transition-all uppercase focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-zinc-950 border-zinc-700 focus:border-indigo-500 text-white placeholder-zinc-600' : 'bg-white border-gray-300 focus:border-indigo-500 text-gray-900 placeholder-gray-400'}`} 
+                    className={`w-full px-4 py-3 rounded-xl border text-sm font-bold outline-none transition-all uppercase focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-950 border-slate-700 focus:border-indigo-500 text-white placeholder-slate-600' : 'bg-white border-slate-300 focus:border-indigo-500 text-slate-900 placeholder-slate-400'}`} 
                 />
                 
                 {/* --- SEARCH SUGGESTIONS DROPDOWN --- */}
                 <AnimatePresence>
                     {showSuggestions && suggestions.length > 0 && (
-                        <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl border shadow-xl max-h-56 overflow-y-auto z-50 ${isDarkMode ? 'bg-zinc-900 border-zinc-700' : 'bg-white border-gray-200'}`}>
+                        <motion.div initial={{opacity:0, y:-5}} animate={{opacity:1, y:0}} exit={{opacity:0}} className={`absolute left-0 right-0 top-[110%] rounded-xl border shadow-xl max-h-56 overflow-y-auto z-50 ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
                             {suggestions.map((s, idx) => (
-                                <div key={idx} onClick={() => selectStock(s)} className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-zinc-800 border-zinc-800' : 'hover:bg-gray-50 border-gray-100'}`}>
+                                <div key={idx} onClick={() => selectStock(s)} className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}>
                                     <div>
                                         {/* Added Name Here */}
-                                        <span className={`block font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{s.symbol}</span>
-                                        <span className={`block text-xs truncate max-w-[200px] ${isDarkMode ? 'text-zinc-400' : 'text-gray-500'}`}>{s.name}</span>
+                                        <span className={`block font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{s.symbol}</span>
+                                        <span className={`block text-xs truncate max-w-[200px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.name}</span>
                                     </div>
-                                    <span className={`font-mono text-xs font-bold ${isDarkMode ? 'text-zinc-300' : 'text-gray-700'}`}>₹{s.current_price}</span>
+                                    <span className={`font-mono text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>₹{s.current_price}</span>
                                 </div>
                             ))}
                         </motion.div>
@@ -364,18 +363,18 @@ function TradeForm({ txn, setTxn, handleTransaction, showSuggestions, setShowSug
             
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className={`text-xs font-bold uppercase tracking-wider mb-1.5 block ml-1 ${isDarkMode ? 'text-zinc-500' : 'text-gray-500'}`}>Quantity</label>
-                    <input type="number" placeholder="0" value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} className={`w-full px-4 py-3 rounded-xl border text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
+                    <label className={`text-xs font-bold uppercase tracking-wider mb-1.5 block ml-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Quantity</label>
+                    <input type="number" placeholder="0" value={txn.quantity} onChange={e => setTxn({...txn, quantity: e.target.value})} className={`w-full px-4 py-3 rounded-xl border text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-950 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
                 </div>
                 <div>
-                    <label className={`text-xs font-bold uppercase tracking-wider mb-1.5 block ml-1 ${isDarkMode ? 'text-zinc-500' : 'text-gray-500'}`}>Price</label>
-                    <input type="number" placeholder="0.00" value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} className={`w-full px-4 py-3 rounded-xl border text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
+                    <label className={`text-xs font-bold uppercase tracking-wider mb-1.5 block ml-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Price</label>
+                    <input type="number" placeholder="0.00" value={txn.price} onChange={e => setTxn({...txn, price: e.target.value})} className={`w-full px-4 py-3 rounded-xl border text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-950 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
                 </div>
             </div>
 
-            <div className={`grid grid-cols-2 gap-2 p-1.5 rounded-xl ${isDarkMode ? 'bg-zinc-950' : 'bg-gray-100'}`}>
+            <div className={`grid grid-cols-2 gap-2 p-1.5 rounded-xl ${isDarkMode ? 'bg-slate-950' : 'bg-slate-100'}`}>
                 {['BUY', 'SELL'].map(type => (
-                    <button key={type} type="button" onClick={() => setTxn({...txn, type})} className={`py-2.5 rounded-lg text-xs font-black tracking-widest transition-all ${txn.type === type ? (type === 'BUY' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-none' : 'bg-red-600 text-white shadow-lg shadow-red-200 dark:shadow-none') : 'opacity-60 hover:opacity-100 text-gray-500 dark:text-gray-400'}`}>{type}</button>
+                    <button key={type} type="button" onClick={() => setTxn({...txn, type})} className={`py-2.5 rounded-lg text-xs font-black tracking-widest transition-all ${txn.type === type ? (type === 'BUY' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-none' : 'bg-rose-600 text-white shadow-lg shadow-rose-200 dark:shadow-none') : 'opacity-60 hover:opacity-100 text-slate-500 dark:text-slate-400'}`}>{type}</button>
                 ))}
             </div>
 
@@ -386,15 +385,15 @@ function TradeForm({ txn, setTxn, handleTransaction, showSuggestions, setShowSug
 
 function PortfolioSkeleton({ isDarkMode }) {
     return (
-        <div className={`min-h-screen p-8 ${isDarkMode ? 'bg-zinc-950' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen p-8 ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
             <div className="max-w-7xl mx-auto space-y-6 animate-pulse">
-                <div className="h-14 bg-gray-200 dark:bg-zinc-800 rounded-lg w-full"></div>
+                <div className="h-14 bg-slate-200 dark:bg-slate-800 rounded-lg w-full"></div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="h-40 bg-gray-200 dark:bg-zinc-800 rounded-xl"></div>
-                        <div className="h-96 bg-gray-200 dark:bg-zinc-800 rounded-xl"></div>
+                        <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+                        <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
                     </div>
-                    <div className="hidden lg:block h-80 bg-gray-200 dark:bg-zinc-800 rounded-xl"></div>
+                    <div className="hidden lg:block h-80 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
                 </div>
             </div>
         </div>
