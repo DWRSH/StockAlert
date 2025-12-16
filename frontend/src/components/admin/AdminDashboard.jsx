@@ -193,7 +193,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
                         <button 
                             disabled={sending}
                             type="submit"
-                            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none"
+                            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {sending ? <span className="animate-pulse">Sending...</span> : <><span className="text-sm">Send Broadcast</span><SendIcon /></>}
                         </button>
