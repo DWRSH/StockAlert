@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { API_URL } from '../../utils/helpers';
 import { TrashIcon, UserIcon, DashboardIcon } from '../common/Icons';
 
-// --- ✨ ICONS ---
+// --- ✨ INTERNAL ICONS ---
 const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>;
 const AdminBadgeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
@@ -30,9 +30,10 @@ export default function AdminDashboard({ token, isDarkMode }) {
     const fetchAdminData = async () => {
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } };
+            // ✅ FIX: Added '/api' prefix to match backend
             const [statsRes, usersRes] = await Promise.all([
-                axios.get(`${API_URL}/admin/stats`, config),
-                axios.get(`${API_URL}/admin/users`, config)
+                axios.get(`${API_URL}/api/admin/stats`, config),
+                axios.get(`${API_URL}/api/admin/users`, config)
             ]);
             setStats(statsRes.data);
             setUsers(usersRes.data);
@@ -52,7 +53,8 @@ export default function AdminDashboard({ token, isDarkMode }) {
         if(!window.confirm("Are you sure? This will delete the user and all their alerts.")) return;
         const tId = toast.loading("Deleting user...");
         try {
-            await axios.delete(`${API_URL}/admin/user/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
+            // ✅ FIX: Added '/api' prefix
+            await axios.delete(`${API_URL}/api/admin/user/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
             setUsers(users.filter(u => u._id !== userId));
             toast.success("User Deleted", { id: tId });
         } catch (error) {
@@ -67,7 +69,8 @@ export default function AdminDashboard({ token, isDarkMode }) {
         setUsers(updatedUsers);
 
         try {
-            await axios.patch(`${API_URL}/admin/user/${userId}/toggle-status`, {}, {
+            // ✅ FIX: Added '/api' prefix
+            await axios.patch(`${API_URL}/api/admin/user/${userId}/toggle-status`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             toast.success(currentStatus ? "User Suspended 🚫" : "User Activated ✅");
@@ -85,7 +88,8 @@ export default function AdminDashboard({ token, isDarkMode }) {
         setSending(true);
         const tId = toast.loading("Queueing Broadcast...");
         try {
-            await axios.post(`${API_URL}/admin/broadcast`, broadcast, { headers: { Authorization: `Bearer ${token}` } });
+            // ✅ FIX: Added '/api' prefix
+            await axios.post(`${API_URL}/api/admin/broadcast`, broadcast, { headers: { Authorization: `Bearer ${token}` } });
             toast.success("Broadcast Sent! 🚀", { id: tId });
             setBroadcast({ subject: '', message: '' });
         } catch (error) {
@@ -119,7 +123,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
         </div>
     );
 
-    // --- THEME VARIABLES (Updated to Match Slate Theme) ---
+    // --- THEME VARIABLES ---
     const cardBg = isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm shadow-slate-200';
     const textMain = isDarkMode ? 'text-slate-100' : 'text-slate-900';
     const textMuted = isDarkMode ? 'text-slate-400' : 'text-slate-500';
@@ -281,7 +285,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
                 </div>
             </div>
             
-            {/* Custom Scrollbar Styles (Matching your Portfolio.jsx logic) */}
+            {/* Custom Scrollbar Styles */}
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
