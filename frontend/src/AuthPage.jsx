@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ✅ IMPORT CENTRALIZED HELPER
-import { API_URL } from '../utils/helpers'; // Ensure path is correct based on your folder structure
+// ✅ FIX: Path changed from '../utils/helpers' to './utils/helpers'
+import { API_URL } from './utils/helpers'; 
 
 // --- ICONS ---
 const LogoIcon = () => <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -25,7 +25,6 @@ export default function AuthPage({ onLogin }) {
     const params = new URLSearchParams(window.location.search);
     if (params.get('verified') === 'true') {
       setSuccessMsg("Email Verified Successfully! You can now login.");
-      // Clean URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     if (params.get('error') === 'invalid_token') {
@@ -45,11 +44,10 @@ export default function AuthPage({ onLogin }) {
         // 🔒 LOGIN LOGIC
         // ==========================================
         const formData = new FormData();
-        // Backend expects 'username' for OAuth2 flow
         formData.append('username', email);
         formData.append('password', password);
         
-        // ✅ FIX: Added '/api' before '/auth/token'
+        // ✅ API Path: /api/auth/token
         const res = await axios.post(`${API_URL}/api/auth/token`, formData);
         
         localStorage.setItem('token', res.data.access_token);
@@ -59,18 +57,17 @@ export default function AuthPage({ onLogin }) {
         // 📝 REGISTER LOGIC
         // ==========================================
         
-        // ✅ FIX: Added '/api' before '/auth/register'
-        await axios.post(`${API_URL}/api/auth/register`, { email, password });
+        // ✅ API Path: /api/auth/register
+        const res = await axios.post(`${API_URL}/api/auth/register`, { email, password });
         
         setIsLogin(true);
-        setSuccessMsg("Account Created! Check your email to verify.");
+        setSuccessMsg(res.data.msg || "Account Created! Check your email to verify.");
         setEmail('');
         setPassword('');
       }
     } catch (err) {
       console.error("Auth Error:", err);
       if (err.response) {
-        // Show exact error from backend
         setError(err.response.data.detail || "Authentication Failed");
       } else {
         setError("Server Error. Is backend running?");
