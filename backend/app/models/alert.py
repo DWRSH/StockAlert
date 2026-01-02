@@ -7,10 +7,15 @@ class Alert(Document):
     stock_symbol: str
     target_price: float
     email: str
+    
+    # ✅ NEW FIELD: Telegram ID
+    # Isko store karne se Background worker fast kaam karega
+    telegram_id: Optional[str] = None 
+
     status: str = "active"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
-    # 👇 NEW FIELD (Pata chale kab alert bheja gaya tha)
+    # Trigger time tracking
     triggered_at: Optional[datetime] = None
 
     class Settings:
