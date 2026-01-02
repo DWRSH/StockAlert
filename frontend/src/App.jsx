@@ -25,7 +25,7 @@ import { API_URL, getThemeStyles } from './utils/helpers'
 import { MenuIcon } from './components/common/Icons'
 
 function App() {
-  // ✅ FIX: Ensure token is not the string "null" or "undefined"
+  // ✅ Token Validation
   const [token, setToken] = useState(() => {
     const saved = localStorage.getItem('token');
     return (saved && saved !== "null" && saved !== "undefined") ? saved : null;
@@ -87,90 +87,81 @@ function App() {
     localStorage.setItem('stockTheme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
-  // ✅ UPDATED FETCH: User Profile (With Debugging & Error Handling)
+  // ✅ FIX: Added '/api' prefix to match backend
   const fetchUserProfile = async () => {
     if (!token) return;
 
-    // DEBUG: Check console to see if Token is present
-    // console.log("Fetching Profile with Token:", token); 
-
     try {
-        // ⚠️ NOTE: Agar 404 aa raha hai, toh shayad backend URL mein '/auth' nahi hai.
-        // Maine yahan '/auth/getuser' rakha hai. Agar fail ho toh '/getuser' try karein.
-        const res = await axios.get(`${API_URL}/auth/getuser`, {
+        // Backend URL structure: /api/auth/getuser
+        const res = await axios.get(`${API_URL}/api/auth/getuser`, {
             headers: { 
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
 
-        // console.log("User Data Loaded:", res.data); // Debug success
         setUserEmail(res.data.email);
         setUserRole(res.data.role || 'user'); 
         setTelegramId(res.data.telegram_id || ''); 
 
     } catch (error) {
-        console.error("Profile fetch failed URL:", error.config?.url); // Debug failed URL
-        console.error("Error Details:", error.response?.status, error.response?.data);
-
-        // Sirf 401 (Unauthorized) par logout karein
+        console.error("Profile fetch failed:", error.config?.url); 
         if (error.response && error.response.status === 401) {
-            console.log("Token expired or invalid. Logging out...");
             logout();
         }
     }
   }
 
-  // --- Update Telegram ID ---
+  // ✅ FIX: Added '/api' prefix
   const updateTelegramId = async (newId) => {
     const tId = toast.loading("Saving Telegram ID...");
     try {
-        await axios.put(`${API_URL}/users/update-telegram`, {
+        await axios.put(`${API_URL}/api/users/update-telegram`, {
             email: userEmail,
             telegram_id: newId
         }, {
-            headers: { Authorization: `Bearer ${token}` } // ✅ Header Added here too
+            headers: { Authorization: `Bearer ${token}` }
         });
         setTelegramId(newId); 
         toast.success("Telegram ID Updated!", { id: tId });
     } catch (error) {
-        console.error(error);
         toast.error("Failed to update ID", { id: tId });
     }
   }
 
+  // ✅ FIX: Added '/api' prefix
   const fetchAlerts = async (isBackground = false) => {
     if (!token) return;
     if (!isBackground) setIsInitialLoading(true);
     try {
-      const res = await axios.get(`${API_URL}/alerts`, { 
+      const res = await axios.get(`${API_URL}/api/alerts`, { 
           headers: { Authorization: `Bearer ${token}` } 
       })
       setAlerts(res.data)
     } catch (error) { 
-        // Silent fail for background fetch, logout only if critical
         if(error.response?.status === 401 && !isBackground) logout(); 
     } finally { 
         if (!isBackground) setIsInitialLoading(false); 
     }
   }
 
+  // ✅ FIX: Added '/api' prefix
   const fetchIndices = async () => {
-    try { const res = await axios.get(`${API_URL}/indices`); setIndices(res.data) } catch (error) {}
+    try { const res = await axios.get(`${API_URL}/api/indices`); setIndices(res.data) } catch (error) {}
   }
 
+  // ✅ FIX: Added '/api' prefix
   const fetchMarketNews = async () => {
     setIsNewsLoading(true);
     try {
-        const res = await axios.get(`${API_URL}/market-news`);
+        const res = await axios.get(`${API_URL}/api/market-news`);
         setGeneralNews(res.data);
     } catch (error) {
-        // toast.error("Failed to load news"); // Optional: Don't spam toasts
+        // Optional error handling
     }
     setIsNewsLoading(false);
   }
 
-  // ✅ Initial Data Load
   useEffect(() => {
     if (token) {
         fetchUserProfile(); 
@@ -192,13 +183,13 @@ function App() {
       }
   }, [activeView])
   
-  // Search Logic
+  // Search Logic (✅ FIX: Added '/api')
   useEffect(() => {
     const delay = setTimeout(async () => {
       if (form.symbol.length > 1) {
         setIsSearching(true)
         try {
-          const res = await axios.get(`${API_URL}/search-stock?query=${form.symbol}`)
+          const res = await axios.get(`${API_URL}/api/search-stock?query=${form.symbol}`)
           setSuggestions(res.data)
           if(res.data.length > 0) setShowSuggestions(true)
           else setShowSuggestions(false)
@@ -215,7 +206,8 @@ function App() {
     setLoading(true)
     const tId = toast.loading('Adding...')
     try {
-      const url = `${API_URL}/add-alert?symbol=${form.symbol}&target=${form.target}`
+      // ✅ FIX: Added '/api'
+      const url = `${API_URL}/api/add-alert?symbol=${form.symbol}&target=${form.target}`
       await axios.post(url, {}, { headers: { Authorization: `Bearer ${token}` } })
       toast.success(`Added ${form.symbol}`, { id: tId })
       setForm({ symbol: '', target: '' })
@@ -224,33 +216,36 @@ function App() {
     setLoading(false)
   }
   
+  // ✅ FIX: Added '/api'
   const handleDelete = async (id) => {
     const tId = toast.loading("Removing...")
     try { 
-        await axios.delete(`${API_URL}/alert/${id}`, { headers: { Authorization: `Bearer ${token}` } }); 
+        await axios.delete(`${API_URL}/api/alert/${id}`, { headers: { Authorization: `Bearer ${token}` } }); 
         setAlerts(prev => prev.filter(a => a._id !== id))
         toast.success('Removed', { id: tId }) 
     } catch (error) { toast.error("Failed", { id: tId }) }
   }
 
+  // ✅ FIX: Added '/api'
   const openChart = async (symbol) => {
     setSelectedStock(symbol); 
     setIsChartLoading(true); 
     setChartData([]);
     try { 
-        const res = await axios.get(`${API_URL}/stock-history/${symbol}`); 
+        const res = await axios.get(`${API_URL}/api/stock-history/${symbol}`); 
         setChartData(res.data);
     } catch (error) { console.error(error); }
     setIsChartLoading(false)
   }
 
+  // ✅ FIX: Added '/api'
   const handleAnalyze = async (symbol) => {
     setAnalyzedStockName(symbol);
     setAiAnalysisResult(null); 
     setIsAiLoading(true);
     const tId = toast.loading(`AI is analyzing ${symbol}...`);
     try {
-        const res = await axios.get(`${API_URL}/analyze-stock/${symbol}`);
+        const res = await axios.get(`${API_URL}/api/analyze-stock/${symbol}`);
         setAiAnalysisResult(res.data.analysis);
         toast.success("Analysis Ready!", { id: tId });
     } catch (error) {
@@ -266,7 +261,6 @@ function App() {
     return userEmail ? userEmail.charAt(0).toUpperCase() : 'U';
   }
 
-  // --- Main Render ---
   if (!token) return <AuthPage onLogin={() => setToken(localStorage.getItem('token'))} />
 
   const commonProps = {
@@ -351,7 +345,6 @@ function App() {
         </main>
       </div>
       
-      {/* --- Modals --- */}
       <ChartModal 
         selectedStock={selectedStock} setSelectedStock={setSelectedStock}
         chartData={chartData} isChartLoading={isChartLoading}
