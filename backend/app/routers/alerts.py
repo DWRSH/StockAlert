@@ -1,38 +1,37 @@
-# File: app/routers/alerts.py
-
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
-
-# ✅ Correct Imports
 from app.models.user import User
 from app.models.alert import Alert
-# get_current_user ab auth router me hai (circular import fix ke baad)
 from app.routers.auth import get_current_user 
 
 router = APIRouter()
 
 # ==========================================
-# 1. Get All Alerts for Logged-in User
+# 1. Get All Alerts
 # ==========================================
 @router.get("/alerts", response_model=List[Alert])
 async def get_my_alerts(current_user: User = Depends(get_current_user)):
-    # User ke email se match hone wale alerts laayein
     # Sort by created_at (Newest first)
     return await Alert.find(Alert.email == current_user.email).sort("-created_at").to_list()
 
 # ==========================================
-# 2. Add New Alert
+# 2. Add New Alert (✅ IMPORTANT UPDATE)
 # ==========================================
 @router.post("/add-alert")
 async def add_alert(symbol: str, target: float, current_user: User = Depends(get_current_user)):
     clean_sym = symbol.upper().strip()
     
+    # ✅ FIX: User profile se Telegram ID fetch karein
+    # Agar user ne settings mein ID daali hai, toh wo yahan aa jayegi
+    user_telegram_id = getattr(current_user, "telegram_id", None)
+
     # Alert Create karo
     new_alert = Alert(
         stock_symbol=clean_sym, 
         target_price=target, 
         email=current_user.email,
-        status="active" # ✅ Explicitly 'active' set kiya (Admin stats ke liye)
+        status="active",
+        telegram_id=user_telegram_id  # 👈 Ye line data save karegi
     )
     await new_alert.create()
     
@@ -45,7 +44,6 @@ async def add_alert(symbol: str, target: float, current_user: User = Depends(get
 async def delete_alert(alert_id: str, current_user: User = Depends(get_current_user)):
     alert = await Alert.get(alert_id)
     
-    # Check: Alert exist karta hai? Aur kya ye usi user ka hai?
     if not alert or alert.email != current_user.email:
         raise HTTPException(status_code=404, detail="Alert not found or unauthorized")
     
@@ -53,10 +51,9 @@ async def delete_alert(alert_id: str, current_user: User = Depends(get_current_u
     return {"msg": "Alert Deleted"}
 
 # ==========================================
-# 4. Clear All Alerts (Optional)
+# 4. Clear All Alerts
 # ==========================================
 @router.delete("/clear-all")
 async def clear_all_alerts(current_user: User = Depends(get_current_user)):
-    # Sirf apne alerts delete karein
     await Alert.find(Alert.email == current_user.email).delete()
     return {"msg": "All your alerts deleted!"}
