@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+// ✅ IMPORT CENTRALIZED HELPER
+import { API_URL } from '../utils/helpers'; // Ensure path is correct based on your folder structure
 
 // --- ICONS ---
 const LogoIcon = () => <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -25,6 +25,7 @@ export default function AuthPage({ onLogin }) {
     const params = new URLSearchParams(window.location.search);
     if (params.get('verified') === 'true') {
       setSuccessMsg("Email Verified Successfully! You can now login.");
+      // Clean URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     if (params.get('error') === 'invalid_token') {
@@ -40,23 +41,36 @@ export default function AuthPage({ onLogin }) {
 
     try {
       if (isLogin) {
-        // LOGIN
+        // ==========================================
+        // 🔒 LOGIN LOGIC
+        // ==========================================
         const formData = new FormData();
+        // Backend expects 'username' for OAuth2 flow
         formData.append('username', email);
         formData.append('password', password);
-        const res = await axios.post(`${API_URL}/token`, formData);
+        
+        // ✅ FIX: Added '/api' before '/auth/token'
+        const res = await axios.post(`${API_URL}/api/auth/token`, formData);
+        
         localStorage.setItem('token', res.data.access_token);
         onLogin(); 
       } else {
-        // REGISTER
-        await axios.post(`${API_URL}/register`, { email, password });
+        // ==========================================
+        // 📝 REGISTER LOGIC
+        // ==========================================
+        
+        // ✅ FIX: Added '/api' before '/auth/register'
+        await axios.post(`${API_URL}/api/auth/register`, { email, password });
+        
         setIsLogin(true);
         setSuccessMsg("Account Created! Check your email to verify.");
         setEmail('');
         setPassword('');
       }
     } catch (err) {
+      console.error("Auth Error:", err);
       if (err.response) {
+        // Show exact error from backend
         setError(err.response.data.detail || "Authentication Failed");
       } else {
         setError("Server Error. Is backend running?");
@@ -104,13 +118,12 @@ export default function AuthPage({ onLogin }) {
           
           {/* ✨ Sliding Tab Switcher */}
           <div className="flex p-1.5 m-1.5 bg-black/20 rounded-2xl relative">
-            {/* The Sliding Background */}
             <motion.div 
                 className="absolute top-1.5 bottom-1.5 bg-indigo-600 rounded-xl shadow-lg z-0"
                 initial={false}
                 animate={{ 
                     left: isLogin ? '6px' : '50%', 
-                    width: 'calc(50% - 6px)' // Adjust for padding
+                    width: 'calc(50% - 6px)' 
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
             />
@@ -130,7 +143,6 @@ export default function AuthPage({ onLogin }) {
           </div>
 
           <div className="p-8 pt-6">
-            {/* Alerts */}
             <AnimatePresence mode='wait'>
               {error && (
                 <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
