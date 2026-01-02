@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'react-hot-toast'; // ✅ Removed 'Toaster' from import
+import { toast } from 'react-hot-toast';
 
 // --- API URL SETUP ---
+// Note: Ensure API_URL is pointing to your backend (e.g., http://127.0.0.1:8000)
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // --- ICONS ---
@@ -48,7 +49,11 @@ export default function Portfolio({ token, isDarkMode }) {
     const fetchPortfolio = async (isBackground = false) => {
         if (!isBackground) setLoading(true); 
         try {
-            const res = await axios.get(`${API_URL}/portfolio`, { headers: { Authorization: `Bearer ${token}` } });
+            // ✅ FIX: Added '/api' prefix
+            const res = await axios.get(`${API_URL}/api/portfolio`, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+            
             const newData = Array.isArray(res.data) ? res.data : (res.data.holdings || []);
             setHoldings(prevHoldings => {
                 const mergedData = newData.map(newItem => {
@@ -72,45 +77,66 @@ export default function Portfolio({ token, isDarkMode }) {
         if (fetchingNamesRef.current) return;
         const stocksToFetch = currentHoldings.filter(h => !h.name || h.name === 'N/A' || h.name === h.symbol);
         if (stocksToFetch.length === 0) return;
+        
         fetchingNamesRef.current = true;
         let updatesFound = false;
         const nameMap = {};
+        
         await Promise.all(stocksToFetch.map(async (stock) => {
             try {
-                const res = await axios.get(`${API_URL}/search-stock?query=${stock.symbol}`);
+                // ✅ FIX: Added '/api' prefix AND Authorization header
+                const res = await axios.get(`${API_URL}/api/search-stock?query=${stock.symbol}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
                 if (res.data && res.data.length > 0) {
                     const match = res.data.find(s => s.symbol === stock.symbol);
                     if (match && match.name) { nameMap[stock.symbol] = match.name; updatesFound = true; }
                 }
             } catch (err) { }
         }));
+        
         if (updatesFound) setHoldings(prev => prev.map(h => nameMap[h.symbol] ? { ...h, name: nameMap[h.symbol] } : h));
         fetchingNamesRef.current = false;
     };
 
     useEffect(() => { 
-        if(token) { fetchPortfolio(false); const interval = setInterval(() => fetchPortfolio(true), 5000); return () => clearInterval(interval); }
+        if(token) { 
+            fetchPortfolio(false); 
+            const interval = setInterval(() => fetchPortfolio(true), 5000); 
+            return () => clearInterval(interval); 
+        }
     }, [token]);
 
     // --- SEARCH & TRADE ---
     useEffect(() => {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
-                try { const res = await axios.get(`${API_URL}/search-stock?query=${txn.symbol}`); setSuggestions(res.data); } catch (err) { }
+                try { 
+                    // ✅ FIX: Added '/api' prefix AND Authorization header
+                    const res = await axios.get(`${API_URL}/api/search-stock?query=${txn.symbol}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }); 
+                    setSuggestions(res.data); 
+                } catch (err) { }
             } else { setSuggestions([]); }
         }, 300);
         return () => clearTimeout(delay);
-    }, [txn.symbol, showSuggestions]);
+    }, [txn.symbol, showSuggestions, token]);
 
     const handleTransaction = async (e) => {
         e.preventDefault();
         if (!txn.symbol || txn.quantity <= 0 || txn.price <= 0) { toast.error("Invalid Input"); return; }
         const tId = toast.loading("Processing...");
         try {
-            await axios.post(`${API_URL}/portfolio/transaction`, {
+            // ✅ FIX: Added '/api' prefix
+            await axios.post(`${API_URL}/api/portfolio/transaction`, {
                 symbol: txn.symbol.toUpperCase(), quantity: Number(txn.quantity), price: Number(txn.price), type: txn.type
             }, { headers: { Authorization: `Bearer ${token}` } });
-            toast.success("Done!", { id: tId }); setShowBottomSheet(false); setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' }); fetchPortfolio(false);
+            
+            toast.success("Done!", { id: tId }); 
+            setShowBottomSheet(false); 
+            setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' }); 
+            fetchPortfolio(false);
         } catch (error) { toast.error("Failed", { id: tId }); }
     };
 
@@ -130,10 +156,7 @@ export default function Portfolio({ token, isDarkMode }) {
     if (loading) return <PortfolioSkeleton isDarkMode={isDarkMode} />;
 
     return (
-        // BG-TRANSPARENT
         <div className={`min-h-screen w-full font-sans bg-transparent ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-            
-            {/* ✅ REMOVED <Toaster /> FROM HERE */}
             
             {/* --- HEADER (Non-Sticky, Transparent) --- */}
             <div className={`w-full px-4 sm:px-6 lg:px-8 py-5 border-b bg-transparent ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
