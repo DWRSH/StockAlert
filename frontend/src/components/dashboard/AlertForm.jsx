@@ -2,6 +2,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SearchIcon } from '../common/Icons';
 
 export default function AlertForm({ form, setForm, handleSubmit, loading, suggestions, showSuggestions, setShowSuggestions, isSearching, theme, isDarkMode }) {
+  
+  // Logic to guess currency symbol for the Target Input
+  // (Search suggestions me to exact data hai, par input field ke liye guess kar rahe hain)
+  const getCurrencySymbol = () => {
+      if (!form.symbol) return '₹';
+      // Agar symbol me '.' nahi hai (e.g. AAPL) aur length < 6 hai to shayad US stock hai
+      // Note: Ye sirf UI ke liye hai, actual logic backend handle karega
+      return form.symbol.includes('.') ? '₹' : (form.symbol.length > 0 && form.symbol.length <= 5 ? '$' : '₹');
+  };
+
   return (
     <div className={`border rounded-2xl p-2 shadow-lg flex flex-col md:flex-row gap-2 transition-colors duration-300 ${theme.card}`}>
         
@@ -12,7 +22,7 @@ export default function AlertForm({ form, setForm, handleSubmit, loading, sugges
             </div>
             <input 
                 type="text" 
-                placeholder="Search stock" 
+                placeholder="Search stock (e.g. AAPL, TATA)" 
                 value={form.symbol}
                 onChange={(e) => setForm({...form, symbol: e.target.value.toUpperCase()})}
                 className={`w-full bg-transparent border-none outline-none py-3 pl-12 pr-4 font-medium h-full ${theme.input}`} 
@@ -31,7 +41,7 @@ export default function AlertForm({ form, setForm, handleSubmit, loading, sugges
                             <div 
                                 key={i} 
                                 onClick={() => {
-                                    setForm({...form, symbol: s.symbol}); // Optional: Auto-fill target with current price
+                                    setForm({...form, symbol: s.symbol, target: s.current_price || ''});
                                     setShowSuggestions(false);
                                 }} 
                                 className={`px-4 py-3 cursor-pointer flex justify-between items-center border-b last:border-0 transition-colors ${isDarkMode ? 'hover:bg-slate-800/50 border-slate-800' : 'hover:bg-slate-50 border-slate-100'}`}
@@ -44,14 +54,17 @@ export default function AlertForm({ form, setForm, handleSubmit, loading, sugges
                                     </span>
                                 </div>
 
-                                {/* Right Side: Live Price */}
+                                {/* Right Side: Live Price with Currency Logic */}
                                 <div className="text-right">
                                     <span className={`font-mono font-bold text-sm block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                        {/* Check agar price backend se aa raha hai */}
-                                        ₹{s.current_price ? s.current_price.toLocaleString() : 'N/A'}
+                                        {/* ✅ FIX: Dynamic Currency Symbol */}
+                                        {s.currency === 'USD' ? '$' : '₹'}{s.current_price ? s.current_price.toLocaleString() : 'N/A'}
                                     </span>
-                                    {/* Optional: Add small label */}
-                                    <span className="text-[9px] opacity-40 uppercase font-bold tracking-widest">Live</span>
+                                    
+                                    {/* ✅ FIX: Currency Badge */}
+                                    <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ml-auto w-fit block mt-0.5 ${s.currency === 'USD' ? 'bg-blue-500/10 text-blue-500' : 'bg-orange-500/10 text-orange-500'}`}>
+                                        {s.currency || 'INR'}
+                                    </span>
                                 </div>
                             </div>
                         ))}
@@ -67,7 +80,10 @@ export default function AlertForm({ form, setForm, handleSubmit, loading, sugges
         
         {/* Target Price Input */}
         <div className="flex-1 relative group">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50 font-mono">₹</div>
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50 font-mono">
+                {/* ✅ FIX: Input symbol dynamic based on typed text */}
+                {getCurrencySymbol()}
+            </div>
             <input 
                 type="number" 
                 placeholder="Target Price" 
