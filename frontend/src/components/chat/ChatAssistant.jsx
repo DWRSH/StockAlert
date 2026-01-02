@@ -15,16 +15,15 @@ export default function ChatAssistant({ theme, isDarkMode }) {
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     
-    // ✅ NEW: Dynamic Height State for Mobile Keyboard
+    // Dynamic Height State for Mobile Keyboard
     const [viewportHeight, setViewportHeight] = useState('100%');
     const messagesEndRef = useRef(null);
 
-    // ✅ Logic: Keyboard khulne par height calculate karna
+    // Logic: Keyboard resize handling
     useEffect(() => {
         if (!isOpen) return;
 
         const handleResize = () => {
-            // VisualViewport API sabse accurate hota hai mobile keyboards ke liye
             if (window.visualViewport) {
                 setViewportHeight(`${window.visualViewport.height}px`);
             } else {
@@ -35,7 +34,6 @@ export default function ChatAssistant({ theme, isDarkMode }) {
         window.visualViewport?.addEventListener('resize', handleResize);
         window.addEventListener('resize', handleResize);
         
-        // Initial set
         handleResize();
 
         return () => {
@@ -51,15 +49,30 @@ export default function ChatAssistant({ theme, isDarkMode }) {
     const handleSend = async (e) => {
         e.preventDefault();
         if (!input.trim()) return;
+        
         const userMsg = input;
         setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
         setInput('');
         setIsTyping(true);
+
         try {
-            const res = await axios.post(`${API_URL}/chat`, { message: userMsg });
+            // ✅ FIX 1: Get Token directly from localStorage (Props se nahi aa raha tha)
+            const token = localStorage.getItem('token');
+
+            // ✅ FIX 2: Updated URL to include '/api' and added Headers
+            const res = await axios.post(`${API_URL}/api/chat`, 
+                { message: userMsg }, 
+                {
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
             setMessages(prev => [...prev, { role: 'bot', text: res.data.reply }]);
         } catch (error) {
-            setMessages(prev => [...prev, { role: 'bot', text: "⚠️ Server busy." }]);
+            console.error("Chat Error:", error);
+            setMessages(prev => [...prev, { role: 'bot', text: "⚠️ Server busy or unauthorized." }]);
         }
         setIsTyping(false);
     };
@@ -74,7 +87,6 @@ export default function ChatAssistant({ theme, isDarkMode }) {
                         exit={{ opacity: 0, y: 50, scale: 0.95 }}
                         transition={{ type: "spring", damping: 25, stiffness: 350 }}
                         
-                        // ✅ IMPORTANT: Style prop se height control kar rahe hain mobile ke liye
                         style={{ 
                             height: window.innerWidth < 768 ? viewportHeight : '550px',
                             top: window.innerWidth < 768 ? 0 : 'auto' 
@@ -118,7 +130,7 @@ export default function ChatAssistant({ theme, isDarkMode }) {
                                         ? 'bg-indigo-600 text-white rounded-br-none' 
                                         : (isDarkMode ? 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700' : 'bg-white text-slate-800 rounded-bl-none border border-slate-200')
                                     }`}>
-                                        {msg.text}
+                                            {msg.text}
                                     </div>
                                 </div>
                             ))}
