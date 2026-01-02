@@ -20,3 +20,4 @@ google-generativeai>=0.8.3
 feedparser
 async_lru
 pandas
+httpx
