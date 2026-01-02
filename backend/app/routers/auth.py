@@ -1,5 +1,3 @@
-# File: app/routers/auth.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -17,8 +15,6 @@ router = APIRouter()
 # ==========================================
 # 🔐 SECURITY HELPERS
 # ==========================================
-# Note: tokenUrl must match the route name where login happens. 
-# Since we are inside 'auth' router with prefix, the relative URL is "token"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token") 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -28,7 +24,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # Token Decode
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
@@ -36,7 +31,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     
-    # User Find (Using Beanie Syntax)
     user = await User.find_one(User.email == email)
     if user is None:
         raise credentials_exception
@@ -47,8 +41,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 # ==========================================
 @router.post("/register")
 async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
+    # ✅ FIX: Register karte waqt hi email ko lowercase kar dein
+    clean_email = user_data.email.strip().lower()
+
     # Check if user already exists
-    existing_user = await User.find_one(User.email == user_data.email)
+    existing_user = await User.find_one(User.email == clean_email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -58,35 +55,57 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
     
     # Create User in DB
     new_user = User(
-        email=user_data.email, 
+        email=clean_email, # Save clean email
         hashed_password=hashed_pass,
         is_verified=False,
         verification_token=token,
-        role="user" # Default role
+        role="user"
     )
     await new_user.create()
     
-    # Send Email in Background
-    background_tasks.add_task(send_verification_email, user_data.email, token)
+    background_tasks.add_task(send_verification_email, clean_email, token)
     
     return {"msg": "Registration successful! Please check email to verify."}
 
 # ==========================================
-# 2. LOGIN ROUTE (Token Generation)
+# 2. LOGIN ROUTE (Fixed & Debugged)
 # ==========================================
 @router.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = await User.find_one(User.email == form_data.username)
+    # 1. Clean Input
+    email_input = form_data.username.strip().lower()
     
-    # Verify User & Password
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    print(f"\n🔍 LOGIN DEBUG: Attempting to login with -> '{email_input}'")
+
+    # 2. Try Exact Match First (Fastest)
+    user = await User.find_one(User.email == email_input)
+    
+    # 3. Agar nahi mila, to Case-Insensitive Search karo (Safety Net)
+    if not user:
+        print("⚠️ Exact match failed. Trying case-insensitive search...")
+        user = await User.find_one({"email": {"$regex": f"^{email_input}$", "$options": "i"}})
+
+    # 4. Check User
+    if not user:
+        print("❌ DB Result: User NOT FOUND")
+        # Security reason se hum generic message dete hain, par console me pata chal jayega
         raise HTTPException(status_code=401, detail="Incorrect email or password")
-    
-    # Check if Email is Verified
+
+    print(f"✅ DB Result: User FOUND ({user.email})")
+
+    # 5. Verify Password
+    if not verify_password(form_data.password, user.hashed_password):
+        print("❌ Password Check: FAILED")
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    # 6. Check Verification
     if not user.is_verified:
+        print("❌ Verification Check: FAILED (Email not verified)")
         raise HTTPException(status_code=403, detail="Email not verified.")
     
-    # Generate JWT Token
+    print("✅ Password & Verification: SUCCESS. Generating Token...")
+
+    # Generate Token
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -97,31 +116,23 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def verify_email(token: str):
     user = await User.find_one(User.verification_token == token)
     
-    # Agar token galat hai
     if not user:
         return RedirectResponse(url=f"{settings.FRONTEND_URL}?error=invalid_token")
     
-    # User Verify karo
     user.is_verified = True
     user.verification_token = None
     await user.save()
     
-    # Redirect to Frontend
     return RedirectResponse(url=f"{settings.FRONTEND_URL}?verified=true")
 
 # ==========================================
-# 4. GET USER PROFILE (✅ FIXED)
+# 4. GET USER PROFILE
 # ==========================================
 @router.get("/getuser") 
 async def get_user_profile(current_user: User = Depends(get_current_user)):
-    """
-    Route: /api/auth/getuser
-    Returns: User details including telegram_id
-    """
     return {
         "email": current_user.email,
         "name": current_user.email.split("@")[0], 
         "role": getattr(current_user, "role", "user"),
-        # ✅ Telegram ID bhi bhejna zaroori hai frontend ke liye
         "telegram_id": getattr(current_user, "telegram_id", "") 
     }
