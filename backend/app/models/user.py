@@ -1,5 +1,5 @@
 from beanie import Document, Indexed
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
@@ -17,9 +17,15 @@ class User(Document):
     # Role Field (Admin/User)
     role: str = "user" 
 
-    # ✅ NEW FIELD: Telegram Integration
-    # Isko Optional rakha hai kyunki naye users ke paas ye starting mein nahi hoga
+    # ✅ NEW: Status Field (Admin Dashboard ke liye zaroori)
+    # Default True rahega, agar False hua toh user login nahi kar payega
+    is_active: bool = True
+
+    # Telegram Integration
     telegram_id: Optional[str] = None 
+    
+    # Audit Trail
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
         name = "users"
