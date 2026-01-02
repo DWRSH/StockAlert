@@ -104,16 +104,6 @@ export default function ProfileModal({
                                 SAVE
                             </button>
                         </div>
-
-                        <button 
-                            onClick={handleTestNotification}
-                            disabled={testLoading}
-                            className={`w-full py-2 rounded-xl text-[10px] font-bold tracking-widest border transition-all 
-                            ${isDarkMode ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                        >
-                            {testLoading ? "SENDING..." : "⚡ SEND TEST NOTIFICATION"}
-                        </button>
-                        
                         <p className={`text-[10px] text-center italic ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                             Get ID from <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" className="text-indigo-500 underline">@userinfobot</a>
                         </p>
