@@ -43,10 +43,18 @@ export default function Portfolio({ token, isDarkMode }) {
 
     // --- FETCH LOGIC ---
     const fetchPortfolio = async (isBackground = false) => {
+        if (!token) {
+            console.error("❌ Token missing in Portfolio component");
+            return;
+        }
+
         if (!isBackground) setLoading(true); 
         try {
-            // ✅ FIX: Removed '/api' because it's already in API_URL
-            const res = await axios.get(`${API_URL}/portfolio`, { 
+            // 👇 DEBUG: Console me check karein ki URL kya ban raha hai
+            // console.log("Fetching Portfolio from:", `${API_URL}/api/portfolio`);
+
+            // ✅ FIX: Added '/api' back (Assuming API_URL is localhost:8000)
+            const res = await axios.get(`${API_URL}/api/portfolio`, { 
                 headers: { Authorization: `Bearer ${token}` } 
             });
             
@@ -68,7 +76,12 @@ export default function Portfolio({ token, isDarkMode }) {
                 });
             });
 
-        } catch (error) { console.error("Error fetching portfolio:", error); } 
+        } catch (error) { 
+            console.error("❌ Error fetching portfolio:", error);
+            if(error.response) {
+                console.error("Server Response:", error.response.status, error.response.data);
+            }
+        } 
         finally { if (!isBackground) setLoading(false); }
     };
 
@@ -83,8 +96,8 @@ export default function Portfolio({ token, isDarkMode }) {
         
         await Promise.all(stocksToFetch.map(async (stock) => {
             try {
-                // ✅ FIX: Removed '/api'
-                const res = await axios.get(`${API_URL}/search-stock?query=${stock.symbol}`, {
+                // ✅ FIX: Added '/api'
+                const res = await axios.get(`${API_URL}/api/search-stock?query=${stock.symbol}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.data && res.data.length > 0) {
@@ -116,8 +129,8 @@ export default function Portfolio({ token, isDarkMode }) {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
                 try { 
-                    // ✅ FIX: Removed '/api'
-                    const res = await axios.get(`${API_URL}/search-stock?query=${txn.symbol}`, {
+                    // ✅ FIX: Added '/api'
+                    const res = await axios.get(`${API_URL}/api/search-stock?query=${txn.symbol}`, {
                         headers: { Authorization: `Bearer ${token}` }
                     }); 
                     setSuggestions(res.data); 
@@ -132,8 +145,8 @@ export default function Portfolio({ token, isDarkMode }) {
         if (!txn.symbol || txn.quantity <= 0 || txn.price <= 0) { toast.error("Invalid Input"); return; }
         const tId = toast.loading("Processing...");
         try {
-            // ✅ FIX: Removed '/api'
-            await axios.post(`${API_URL}/portfolio/transaction`, {
+            // ✅ FIX: Added '/api'
+            await axios.post(`${API_URL}/api/portfolio/transaction`, {
                 symbol: txn.symbol.toUpperCase(), quantity: Number(txn.quantity), price: Number(txn.price), type: txn.type
             }, { headers: { Authorization: `Bearer ${token}` } });
             
