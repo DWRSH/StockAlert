@@ -25,11 +25,16 @@ import { API_URL, getThemeStyles } from './utils/helpers'
 import { MenuIcon } from './components/common/Icons'
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token'))
+  // ✅ FIX: Ensure token is not the string "null" or "undefined"
+  const [token, setToken] = useState(() => {
+    const saved = localStorage.getItem('token');
+    return (saved && saved !== "null" && saved !== "undefined") ? saved : null;
+  })
   
   // User & Role State
   const [userEmail, setUserEmail] = useState('')
-  const [userRole, setUserRole] = useState('user') // Default Role
+  const [userRole, setUserRole] = useState('user') 
+  const [telegramId, setTelegramId] = useState('') 
 
   // Dashboard States
   const [form, setForm] = useState({ symbol: '', target: '' })
@@ -66,13 +71,14 @@ function App() {
 
   const theme = getThemeStyles(isDarkMode);
 
-  // --- Effects ---
+  // --- Logout Function ---
   const logout = () => { 
       localStorage.removeItem('token'); 
       setToken(null); 
       setUserEmail('');
+      setTelegramId('');
       setUserRole('user');
-      toast.success('See you soon!');
+      toast.success('Logged out successfully');
   }
   
   const toggleTheme = () => setIsDarkMode(!isDarkMode)
@@ -81,21 +87,55 @@ function App() {
     localStorage.setItem('stockTheme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
-  // ✅ Fetch User Profile & Role (Centralized)
+  // ✅ UPDATED FETCH: User Profile (With Debugging & Error Handling)
   const fetchUserProfile = async () => {
     if (!token) return;
+
+    // DEBUG: Check console to see if Token is present
+    // console.log("Fetching Profile with Token:", token); 
+
     try {
+        // ⚠️ NOTE: Agar 404 aa raha hai, toh shayad backend URL mein '/auth' nahi hai.
+        // Maine yahan '/auth/getuser' rakha hai. Agar fail ho toh '/getuser' try karein.
         const res = await axios.get(`${API_URL}/auth/getuser`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
+
+        // console.log("User Data Loaded:", res.data); // Debug success
         setUserEmail(res.data.email);
         setUserRole(res.data.role || 'user'); 
+        setTelegramId(res.data.telegram_id || ''); 
+
     } catch (error) {
-        console.error("Profile fetch failed", error);
-        // Agar token invalid hai to logout karo
+        console.error("Profile fetch failed URL:", error.config?.url); // Debug failed URL
+        console.error("Error Details:", error.response?.status, error.response?.data);
+
+        // Sirf 401 (Unauthorized) par logout karein
         if (error.response && error.response.status === 401) {
+            console.log("Token expired or invalid. Logging out...");
             logout();
         }
+    }
+  }
+
+  // --- Update Telegram ID ---
+  const updateTelegramId = async (newId) => {
+    const tId = toast.loading("Saving Telegram ID...");
+    try {
+        await axios.put(`${API_URL}/users/update-telegram`, {
+            email: userEmail,
+            telegram_id: newId
+        }, {
+            headers: { Authorization: `Bearer ${token}` } // ✅ Header Added here too
+        });
+        setTelegramId(newId); 
+        toast.success("Telegram ID Updated!", { id: tId });
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to update ID", { id: tId });
     }
   }
 
@@ -103,10 +143,13 @@ function App() {
     if (!token) return;
     if (!isBackground) setIsInitialLoading(true);
     try {
-      const res = await axios.get(`${API_URL}/alerts`, { headers: { Authorization: `Bearer ${token}` } })
+      const res = await axios.get(`${API_URL}/alerts`, { 
+          headers: { Authorization: `Bearer ${token}` } 
+      })
       setAlerts(res.data)
     } catch (error) { 
-        if(error.response?.status === 401) logout(); 
+        // Silent fail for background fetch, logout only if critical
+        if(error.response?.status === 401 && !isBackground) logout(); 
     } finally { 
         if (!isBackground) setIsInitialLoading(false); 
     }
@@ -122,7 +165,7 @@ function App() {
         const res = await axios.get(`${API_URL}/market-news`);
         setGeneralNews(res.data);
     } catch (error) {
-        toast.error("Failed to load news");
+        // toast.error("Failed to load news"); // Optional: Don't spam toasts
     }
     setIsNewsLoading(false);
   }
@@ -130,7 +173,7 @@ function App() {
   // ✅ Initial Data Load
   useEffect(() => {
     if (token) {
-        fetchUserProfile(); // Sabse pehle user info lao
+        fetchUserProfile(); 
         fetchAlerts(); 
         fetchIndices();
         
@@ -226,43 +269,28 @@ function App() {
   // --- Main Render ---
   if (!token) return <AuthPage onLogin={() => setToken(localStorage.getItem('token'))} />
 
+  const commonProps = {
+      theme, isDarkMode, userEmail, logout, toggleTheme, indices, getAvatarLetter, token, userRole, setIsProfileOpen
+  };
+
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${theme.bg} ${theme.text}`}>
       <Toaster position="bottom-right" toastOptions={{ style: { background: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#333', border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0' } }} />
 
       <MobileMenu 
+        {...commonProps}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
-        theme={theme}
-        isDarkMode={isDarkMode}
-        setIsProfileOpen={setIsProfileOpen}
-        userEmail={userEmail}
-        getAvatarLetter={getAvatarLetter}
-        indices={indices}
         activeView={activeView}
         setActiveView={setActiveView}
-        toggleTheme={toggleTheme}
-        logout={logout}
-        token={token}
-        userRole={userRole} // ✅ Props Passed
       />
 
       <div className="flex h-screen overflow-hidden">
         
         <Sidebar 
-          theme={theme}
-          isDarkMode={isDarkMode}
+          {...commonProps}
           activeView={activeView}
           setActiveView={setActiveView}
-          isProfileOpen={isProfileOpen}
-          setIsProfileOpen={setIsProfileOpen}
-          userEmail={userEmail}
-          logout={logout}
-          toggleTheme={toggleTheme}
-          indices={indices}
-          getAvatarLetter={getAvatarLetter}
-          token={token}
-          userRole={userRole} // ✅ Props Passed
         />
 
         <main className={`flex-1 overflow-y-auto relative transition-colors duration-300 ${theme.bg}`}>
@@ -276,7 +304,6 @@ function App() {
 
             <div className="max-w-5xl mx-auto p-4 md:p-8 lg:p-10 pb-24">
                 
-                {/* ✅ View Switching Logic */}
                 {activeView === 'portfolio' ? (
                     <Portfolio token={token} isDarkMode={isDarkMode} />
                 ) : activeView === 'admin' ? ( 
@@ -324,7 +351,7 @@ function App() {
         </main>
       </div>
       
-      {/* --- Modals & Overlays --- */}
+      {/* --- Modals --- */}
       <ChartModal 
         selectedStock={selectedStock} setSelectedStock={setSelectedStock}
         chartData={chartData} isChartLoading={isChartLoading}
@@ -332,10 +359,15 @@ function App() {
       />
       
       <ProfileModal 
-        isProfileOpen={isProfileOpen} setIsProfileOpen={setIsProfileOpen}
-        userEmail={userEmail} getAvatarLetter={getAvatarLetter}
-        logout={logout} theme={theme} isDarkMode={isDarkMode}
-        token={token}
+        isProfileOpen={isProfileOpen} 
+        setIsProfileOpen={setIsProfileOpen}
+        userEmail={userEmail} 
+        getAvatarLetter={getAvatarLetter}
+        logout={logout} 
+        theme={theme} 
+        isDarkMode={isDarkMode}
+        telegramId={telegramId}
+        updateTelegramId={updateTelegramId}
       />
 
       <AiModal 
