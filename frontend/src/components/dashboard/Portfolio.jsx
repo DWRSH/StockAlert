@@ -61,8 +61,11 @@ export default function Portfolio({ token, isDarkMode }) {
 
             setHoldings(prevHoldings => {
                 return newData.map(newItem => {
+                    // Agar naye data me naam missing hai, to purana state check karo
+                    // taki naam flick na kare
                     const existingItem = prevHoldings.find(p => p.symbol === newItem.symbol);
                     let finalName = newItem.name;
+                    
                     if (!finalName || finalName === 'N/A' || finalName === newItem.symbol) {
                         if (existingItem && existingItem.name && existingItem.name !== 'N/A' && existingItem.name !== existingItem.symbol) {
                             finalName = existingItem.name;
@@ -78,14 +81,21 @@ export default function Portfolio({ token, isDarkMode }) {
         finally { if (!isBackground) setLoading(false); }
     };
 
-    // ✅ FIXED: Name Fetching Logic for US Stocks
+    // ✅ FIXED: Aggressive Name Fetching for US Stocks
     const fetchMissingNames = async (currentHoldings) => {
         if (fetchingNamesRef.current) return;
         
-        // Filter those needing names
-        const stocksToFetch = currentHoldings.filter(h => !h.name || h.name === 'N/A' || h.name === h.symbol);
+        // Filter stocks jinka naam sahi nahi hai
+        const stocksToFetch = currentHoldings.filter(h => 
+            !h.name || 
+            h.name === 'N/A' || 
+            h.name.trim() === '' ||
+            h.name.toUpperCase() === h.symbol.toUpperCase()
+        );
         
         if (stocksToFetch.length === 0) return;
+        
+        console.log("🔍 Fetching names for:", stocksToFetch.map(s => s.symbol));
         
         fetchingNamesRef.current = true;
         let updatesFound = false;
@@ -98,26 +108,31 @@ export default function Portfolio({ token, isDarkMode }) {
                 });
 
                 if (res.data && res.data.length > 0) {
-                    // 1. Exact Match (Case Insensitive)
-                    let match = res.data.find(s => s.symbol.toUpperCase() === stock.symbol.toUpperCase());
-                    
-                    // 2. Fallback: Take first result if exact match fails (Fixes US stock issue)
-                    if (!match) {
-                        match = res.data[0];
-                    }
+                    // Strategy: Specific symbol search kiya tha, to First Result hi best hai
+                    const bestMatch = res.data[0];
 
-                    if (match && match.name) { 
-                        nameMap[stock.symbol] = match.name; 
+                    if (bestMatch && bestMatch.name) { 
+                        // Key ko Uppercase rakho matching ke liye
+                        nameMap[stock.symbol.toUpperCase()] = bestMatch.name; 
                         updatesFound = true; 
+                        console.log(`✅ Name Found: ${stock.symbol} -> ${bestMatch.name}`);
                     }
                 }
             } catch (err) {
                 // Silent fail
+                console.error(`Failed name fetch: ${stock.symbol}`);
             }
         }));
         
         if (updatesFound) {
-            setHoldings(prev => prev.map(h => nameMap[h.symbol] ? { ...h, name: nameMap[h.symbol] } : h));
+            setHoldings(prev => prev.map(h => {
+                const upperSym = h.symbol.toUpperCase();
+                // Match Symbol (Case Insensitive)
+                if (nameMap[upperSym]) {
+                    return { ...h, name: nameMap[upperSym] };
+                }
+                return h;
+            }));
         }
         fetchingNamesRef.current = false;
     };
@@ -150,7 +165,7 @@ export default function Portfolio({ token, isDarkMode }) {
         if (!txn.symbol || txn.quantity <= 0 || txn.price <= 0) { toast.error("Invalid Input"); return; }
         const tId = toast.loading("Processing...");
         
-        // ✅ FIXED: Trim and Uppercase Symbol
+        // Clean Input
         const cleanSymbol = txn.symbol.toUpperCase().trim();
 
         try {
@@ -164,6 +179,7 @@ export default function Portfolio({ token, isDarkMode }) {
             toast.success("Done!", { id: tId }); 
             setShowBottomSheet(false); 
             setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' }); 
+            // Turant fetch karo
             fetchPortfolio(false);
         } catch (error) { toast.error("Failed", { id: tId }); }
     };
@@ -210,6 +226,7 @@ export default function Portfolio({ token, isDarkMode }) {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
+                        {/* Summary Cards */}
                         <div className={`rounded-xl border p-6 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
@@ -236,6 +253,7 @@ export default function Portfolio({ token, isDarkMode }) {
                             </div>
                         </div>
 
+                        {/* Holdings Table */}
                         <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                             <div className={`p-4 border-b flex justify-between items-center ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Holdings ({filteredHoldings.length})</h3>
@@ -245,6 +263,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                 </div>
                             </div>
                             
+                            {/* Desktop View */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className={`text-xs uppercase font-bold tracking-wider ${isDarkMode ? 'bg-slate-950/50 text-slate-500' : 'bg-slate-50 text-slate-500'}`}>
@@ -274,7 +293,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                                                 <div className={`w-1 h-6 rounded-full ${colors[i % colors.length]}`}></div>
                                                                 <div>
                                                                     <span className={`font-bold block text-sm ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{h.symbol}</span>
-                                                                    <span className={`text-[10px] font-medium truncate max-w-[120px] block ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name || 'N/A'}</span>
+                                                                    <span className={`text-[10px] font-medium truncate max-w-[150px] block ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name || 'N/A'}</span>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -297,6 +316,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                 </table>
                             </div>
                             
+                            {/* Mobile View */}
                             <div className="md:hidden divide-y dark:divide-slate-800">
                                 {filteredHoldings.map((h, i) => {
                                     const sym = h.currency_symbol || '₹';
@@ -336,6 +356,7 @@ export default function Portfolio({ token, isDarkMode }) {
                         </div>
                     </div>
 
+                    {/* Trade Section */}
                     <div className="hidden lg:block space-y-6">
                         <div className={`sticky top-24 rounded-xl border p-6 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                             <div className={`flex items-center gap-2 mb-6 pb-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
@@ -358,6 +379,7 @@ export default function Portfolio({ token, isDarkMode }) {
                 </div>
             </main>
 
+            {/* Mobile Bottom Sheet */}
             <AnimatePresence>
                 {showBottomSheet && (
                     <>
