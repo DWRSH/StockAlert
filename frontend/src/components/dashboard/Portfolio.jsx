@@ -33,6 +33,14 @@ export default function Portfolio({ token, isDarkMode }) {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     
+    // ✅ NEW: Name Cache State (Load from LocalStorage)
+    const [nameCache, setNameCache] = useState(() => {
+        try {
+            const saved = localStorage.getItem('stockNames');
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    });
+
     const [showBottomSheet, setShowBottomSheet] = useState(false);
     const [txn, setTxn] = useState({ symbol: '', quantity: '', price: '', type: 'BUY' });
     const [suggestions, setSuggestions] = useState([]);
@@ -43,10 +51,7 @@ export default function Portfolio({ token, isDarkMode }) {
 
     // --- FETCH LOGIC ---
     const fetchPortfolio = async (isBackground = false) => {
-        if (!token) {
-            console.error("❌ Token missing in Portfolio component");
-            return;
-        }
+        if (!token) return;
 
         if (!isBackground) setLoading(true); 
         try {
@@ -56,24 +61,20 @@ export default function Portfolio({ token, isDarkMode }) {
             
             const newData = Array.isArray(res.data) ? res.data : (res.data.holdings || []);
             
-            // Trigger name fetch separately
-            fetchMissingNames(newData);
-
-            setHoldings(prevHoldings => {
-                return newData.map(newItem => {
-                    // Agar naye data me naam missing hai, to purana state check karo
-                    // taki naam flick na kare
-                    const existingItem = prevHoldings.find(p => p.symbol === newItem.symbol);
-                    let finalName = newItem.name;
-                    
-                    if (!finalName || finalName === 'N/A' || finalName === newItem.symbol) {
-                        if (existingItem && existingItem.name && existingItem.name !== 'N/A' && existingItem.name !== existingItem.symbol) {
-                            finalName = existingItem.name;
-                        }
-                    }
-                    return { ...newItem, name: finalName };
-                });
+            // 1. Pehle Cache se naam attach karo
+            const mergedData = newData.map(item => {
+                const cachedName = nameCache[item.symbol.toUpperCase()];
+                return { 
+                    ...item, 
+                    // Agar cache me naam hai to wo use karo, warna jo backend se aya wo
+                    name: cachedName || item.name || item.symbol 
+                };
             });
+
+            setHoldings(mergedData);
+            
+            // 2. Ab check karo kiske naam missing hain
+            fetchMissingNames(mergedData);
 
         } catch (error) { 
             console.error("❌ Error fetching portfolio:", error);
@@ -81,66 +82,77 @@ export default function Portfolio({ token, isDarkMode }) {
         finally { if (!isBackground) setLoading(false); }
     };
 
-    // ✅ FIXED: Aggressive Name Fetching for US Stocks
+    // ✅ FIXED: Sequential Fetching + LocalStorage Saving
     const fetchMissingNames = async (currentHoldings) => {
         if (fetchingNamesRef.current) return;
         
-        // Filter stocks jinka naam sahi nahi hai
-        const stocksToFetch = currentHoldings.filter(h => 
-            !h.name || 
-            h.name === 'N/A' || 
-            h.name.trim() === '' ||
-            h.name.toUpperCase() === h.symbol.toUpperCase()
-        );
+        // Filter: Jiska naam Cache me nahi hai
+        const stocksToFetch = currentHoldings.filter(h => {
+            const sym = h.symbol.toUpperCase();
+            // Agar Cache me hai, to ignore karo
+            if (nameCache[sym]) return false;
+            
+            // Agar naam invalid hai, to fetch karo
+            return !h.name || h.name === 'N/A' || h.name === h.symbol;
+        });
         
         if (stocksToFetch.length === 0) return;
         
-        console.log("🔍 Fetching names for:", stocksToFetch.map(s => s.symbol));
-        
         fetchingNamesRef.current = true;
-        let updatesFound = false;
-        const nameMap = {};
+        let newNames = {};
         
-        await Promise.all(stocksToFetch.map(async (stock) => {
+        // Loop sequentially (Ek ke baad ek) taaki API fail na ho
+        for (const stock of stocksToFetch) {
             try {
+                // Thoda delay taaki rate limit na lage
+                await new Promise(r => setTimeout(r, 500)); 
+
                 const res = await axios.get(`${API_URL}/api/search-stock?query=${stock.symbol}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
                 if (res.data && res.data.length > 0) {
-                    // Strategy: Specific symbol search kiya tha, to First Result hi best hai
-                    const bestMatch = res.data[0];
+                    // Exact match ya First result
+                    let match = res.data.find(s => s.symbol.toUpperCase() === stock.symbol.toUpperCase());
+                    if (!match) match = res.data[0];
 
-                    if (bestMatch && bestMatch.name) { 
-                        // Key ko Uppercase rakho matching ke liye
-                        nameMap[stock.symbol.toUpperCase()] = bestMatch.name; 
-                        updatesFound = true; 
-                        console.log(`✅ Name Found: ${stock.symbol} -> ${bestMatch.name}`);
+                    if (match && match.name) {
+                        const cleanName = match.name;
+                        newNames[stock.symbol.toUpperCase()] = cleanName;
+                        console.log(`✅ Found: ${stock.symbol} -> ${cleanName}`);
                     }
                 }
             } catch (err) {
-                // Silent fail
-                console.error(`Failed name fetch: ${stock.symbol}`);
+                console.warn(`Skipping ${stock.symbol}`);
             }
-        }));
+        }
         
-        if (updatesFound) {
+        // Agar kuch naye naam mile, to Cache update karo
+        if (Object.keys(newNames).length > 0) {
+            setNameCache(prev => {
+                const updated = { ...prev, ...newNames };
+                // LocalStorage me save karo
+                localStorage.setItem('stockNames', JSON.stringify(updated));
+                return updated;
+            });
+
+            // UI bhi update karo
             setHoldings(prev => prev.map(h => {
-                const upperSym = h.symbol.toUpperCase();
-                // Match Symbol (Case Insensitive)
-                if (nameMap[upperSym]) {
-                    return { ...h, name: nameMap[upperSym] };
+                if (newNames[h.symbol.toUpperCase()]) {
+                    return { ...h, name: newNames[h.symbol.toUpperCase()] };
                 }
                 return h;
             }));
         }
+        
         fetchingNamesRef.current = false;
     };
 
     useEffect(() => { 
         if(token) { 
             fetchPortfolio(false); 
-            const interval = setInterval(() => fetchPortfolio(true), 5000); 
+            // 10 Seconds interval (thoda relax rakha hai)
+            const interval = setInterval(() => fetchPortfolio(true), 10000); 
             return () => clearInterval(interval); 
         }
     }, [token]);
@@ -179,6 +191,7 @@ export default function Portfolio({ token, isDarkMode }) {
             toast.success("Done!", { id: tId }); 
             setShowBottomSheet(false); 
             setTxn({ symbol: '', quantity: '', price: '', type: 'BUY' }); 
+            
             // Turant fetch karo
             fetchPortfolio(false);
         } catch (error) { toast.error("Failed", { id: tId }); }
@@ -263,7 +276,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                 </div>
                             </div>
                             
-                            {/* Desktop View */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className={`text-xs uppercase font-bold tracking-wider ${isDarkMode ? 'bg-slate-950/50 text-slate-500' : 'bg-slate-50 text-slate-500'}`}>
@@ -293,7 +305,8 @@ export default function Portfolio({ token, isDarkMode }) {
                                                                 <div className={`w-1 h-6 rounded-full ${colors[i % colors.length]}`}></div>
                                                                 <div>
                                                                     <span className={`font-bold block text-sm ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{h.symbol}</span>
-                                                                    <span className={`text-[10px] font-medium truncate max-w-[150px] block ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name || 'N/A'}</span>
+                                                                    {/* Name Display */}
+                                                                    <span className={`text-[10px] font-medium truncate max-w-[150px] block ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name || 'Loading...'}</span>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -316,7 +329,6 @@ export default function Portfolio({ token, isDarkMode }) {
                                 </table>
                             </div>
                             
-                            {/* Mobile View */}
                             <div className="md:hidden divide-y dark:divide-slate-800">
                                 {filteredHoldings.map((h, i) => {
                                     const sym = h.currency_symbol || '₹';
@@ -334,7 +346,7 @@ export default function Portfolio({ token, isDarkMode }) {
                                                     </div>
                                                     <div>
                                                         <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                                                        <p className={`text-xs font-medium truncate max-w-[120px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name}</p>
+                                                        <p className={`text-xs font-medium truncate max-w-[120px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name || 'Loading...'}</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
@@ -356,7 +368,6 @@ export default function Portfolio({ token, isDarkMode }) {
                         </div>
                     </div>
 
-                    {/* Trade Section */}
                     <div className="hidden lg:block space-y-6">
                         <div className={`sticky top-24 rounded-xl border p-6 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                             <div className={`flex items-center gap-2 mb-6 pb-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
@@ -379,7 +390,6 @@ export default function Portfolio({ token, isDarkMode }) {
                 </div>
             </main>
 
-            {/* Mobile Bottom Sheet */}
             <AnimatePresence>
                 {showBottomSheet && (
                     <>
