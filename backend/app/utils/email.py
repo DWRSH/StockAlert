@@ -17,7 +17,6 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 
 # --- SHARED STYLES (Professional Look) ---
-# Ye CSS sabhi emails me consistent look degi
 EMAIL_STYLE = """
 <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
@@ -35,7 +34,7 @@ EMAIL_STYLE = """
     .info-table td { padding: 15px; border-bottom: 1px solid #e2e8f0; }
     .info-label { font-weight: bold; color: #64748b; text-align: left; }
     .info-value { font-weight: bold; color: #0f172a; text-align: right; font-size: 18px; }
-    .highlight { color: #2563eb; font-weight: bold; }
+    .icon-shield { font-size: 48px; margin-bottom: 15px; display: block; }
 </style>
 """
 
@@ -108,12 +107,13 @@ async def send_email_notification(to_email: str, symbol: str, current_price: flo
     """
     return send_email_sync(to_email, subject, html_content)
 
-# ✅ FIXED & PROFESSIONAL VERIFICATION EMAIL
+# ✅ VERIFICATION EMAIL (Shield in Body, Lock in Subject)
 async def send_verification_email(to_email: str, token: str):
     verify_link = f"{BACKEND_URL}/api/auth/verify-email?token={token}"
     print(f"🔗 Verification Link Generated: {verify_link}")
     
-    subject = "Verify your email for Stock Watcher 🔐"
+    # 1. Subject me wahi purana Key & Lock 🔐
+    subject = "Action Required: Verify your Account 🔐"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -126,16 +126,19 @@ async def send_verification_email(to_email: str, token: str):
                     <h1>Stock Watcher</h1>
                 </div>
                 <div class="content">
-                    <h2>Welcome Aboard! 🚀</h2>
-                    <p>Thanks for signing up. We just need to verify your email address to keep your account secure.</p>
+                    
+                    <div class="icon-shield">🛡️</div>
+                    
+                    <h2>Secure your Account</h2>
+                    <p>Welcome! To insure the security of your Stock Watcher account, please verify your email address.</p>
                     <p>Click the button below to activate your account:</p>
                     
                     <div style="margin: 30px 0;">
-                        <a href="{verify_link}" class="btn">Verify My Email</a>
+                        <a href="{verify_link}" class="btn">Verify Account</a>
                     </div>
                     
                     <p style="font-size: 14px; color: #94a3b8; margin-top: 30px;">
-                        If you didn't create an account with Stock Watcher, you can safely ignore this email.
+                        If you didn't create an account, you can safely ignore this email.
                     </p>
                 </div>
                 <div class="footer">
