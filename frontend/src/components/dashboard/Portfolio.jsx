@@ -50,10 +50,6 @@ export default function Portfolio({ token, isDarkMode }) {
 
         if (!isBackground) setLoading(true); 
         try {
-            // 👇 DEBUG: Console me check karein ki URL kya ban raha hai
-            // console.log("Fetching Portfolio from:", `${API_URL}/api/portfolio`);
-
-            // ✅ FIX: Added '/api' back (Assuming API_URL is localhost:8000)
             const res = await axios.get(`${API_URL}/api/portfolio`, { 
                 headers: { Authorization: `Bearer ${token}` } 
             });
@@ -78,16 +74,17 @@ export default function Portfolio({ token, isDarkMode }) {
 
         } catch (error) { 
             console.error("❌ Error fetching portfolio:", error);
-            if(error.response) {
-                console.error("Server Response:", error.response.status, error.response.data);
-            }
         } 
         finally { if (!isBackground) setLoading(false); }
     };
 
+    // ✅ FIXED: Name Fetching Logic for US Stocks
     const fetchMissingNames = async (currentHoldings) => {
         if (fetchingNamesRef.current) return;
+        
+        // Filter those needing names
         const stocksToFetch = currentHoldings.filter(h => !h.name || h.name === 'N/A' || h.name === h.symbol);
+        
         if (stocksToFetch.length === 0) return;
         
         fetchingNamesRef.current = true;
@@ -96,18 +93,27 @@ export default function Portfolio({ token, isDarkMode }) {
         
         await Promise.all(stocksToFetch.map(async (stock) => {
             try {
-                // ✅ FIX: Added '/api'
                 const res = await axios.get(`${API_URL}/api/search-stock?query=${stock.symbol}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
+
                 if (res.data && res.data.length > 0) {
-                    const match = res.data.find(s => s.symbol === stock.symbol);
+                    // 1. Exact Match (Case Insensitive)
+                    let match = res.data.find(s => s.symbol.toUpperCase() === stock.symbol.toUpperCase());
+                    
+                    // 2. Fallback: Take first result if exact match fails (Fixes US stock issue)
+                    if (!match) {
+                        match = res.data[0];
+                    }
+
                     if (match && match.name) { 
                         nameMap[stock.symbol] = match.name; 
                         updatesFound = true; 
                     }
                 }
-            } catch (err) { }
+            } catch (err) {
+                // Silent fail
+            }
         }));
         
         if (updatesFound) {
@@ -129,7 +135,6 @@ export default function Portfolio({ token, isDarkMode }) {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
                 try { 
-                    // ✅ FIX: Added '/api'
                     const res = await axios.get(`${API_URL}/api/search-stock?query=${txn.symbol}`, {
                         headers: { Authorization: `Bearer ${token}` }
                     }); 
@@ -144,10 +149,16 @@ export default function Portfolio({ token, isDarkMode }) {
         e.preventDefault();
         if (!txn.symbol || txn.quantity <= 0 || txn.price <= 0) { toast.error("Invalid Input"); return; }
         const tId = toast.loading("Processing...");
+        
+        // ✅ FIXED: Trim and Uppercase Symbol
+        const cleanSymbol = txn.symbol.toUpperCase().trim();
+
         try {
-            // ✅ FIX: Added '/api'
             await axios.post(`${API_URL}/api/portfolio/transaction`, {
-                symbol: txn.symbol.toUpperCase(), quantity: Number(txn.quantity), price: Number(txn.price), type: txn.type
+                symbol: cleanSymbol, 
+                quantity: Number(txn.quantity), 
+                price: Number(txn.price), 
+                type: txn.type
             }, { headers: { Authorization: `Bearer ${token}` } });
             
             toast.success("Done!", { id: tId }); 
