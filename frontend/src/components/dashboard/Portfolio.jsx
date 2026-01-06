@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../../utils/helpers';
 
-// --- ICONS ---
+// --- ICONS (Original) ---
 const Icons = {
     Plus: ({ className }) => (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
@@ -20,11 +20,6 @@ const Icons = {
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
             <path fillRule="evenodd" d="M1 4a1 1 0 011-1h16a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4zm12 4a3 3 0 11-6 0 3 3 0 016 0zM4 9a1 1 0 100-2 1 1 0 000 2zm13-1a1 1 0 11-2 0 1 1 0 012 0zM1.75 14.5a.75.75 0 000 1.5c4.417 0 8.693.603 12.749 1.73 1.111.309 2.251-.512 2.251-1.696v-.784a.75.75 0 00-1.5 0v.784a6.658 6.658 0 01-1.65-.22c-4.186-1.111-8.528-1.714-12.986-1.714a.75.75 0 00-1.75.25z" clipRule="evenodd" />
         </svg>
-    ),
-    Refresh: ({ className }) => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
-            <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0v2.433l-.31-.31a7 7 0 00-11.712 3.138.75.75 0 001.449.39 5.5 5.5 0 019.201-2.466l.312.312H11.75a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
-        </svg>
     )
 };
 
@@ -38,10 +33,11 @@ export default function Portfolio({ token, isDarkMode }) {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     
-    // Name Cache from LocalStorage
+    // --- SMART CACHE (Browser Memory) ---
+    // Ye browser me naam save rakhega taaki refresh karne par bhi data na jaye
     const [nameCache, setNameCache] = useState(() => {
         try {
-            const saved = localStorage.getItem('stockNames');
+            const saved = localStorage.getItem('companyNames');
             return saved ? JSON.parse(saved) : {};
         } catch { return {}; }
     });
@@ -54,11 +50,11 @@ export default function Portfolio({ token, isDarkMode }) {
 
     const colors = ['bg-indigo-500', 'bg-purple-500', 'bg-blue-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500'];
 
-    // --- FETCH LOGIC ---
+    // --- MAIN FETCH LOGIC ---
     const fetchPortfolio = async (isBackground = false) => {
         if (!token) return;
-        if (!isBackground) setLoading(true);
-        
+
+        if (!isBackground) setLoading(true); 
         try {
             const res = await axios.get(`${API_URL}/api/portfolio`, { 
                 headers: { Authorization: `Bearer ${token}` } 
@@ -66,39 +62,49 @@ export default function Portfolio({ token, isDarkMode }) {
             
             const newData = Array.isArray(res.data) ? res.data : (res.data.holdings || []);
             
-            // Merge Data with Cache
+            // Data Merge Logic:
+            // Backend Data + LocalStorage Cache
             const mergedData = newData.map(item => {
                 const sym = item.symbol.toUpperCase();
-                const cachedName = nameCache[sym];
                 
-                // Priority: Cache > Backend Name > Empty String (Never default to Symbol)
-                let displayName = '';
+                // 1. Agar Cache me naam hai, wahi use karo (Fastest)
+                if (nameCache[sym]) {
+                    return { ...item, name: nameCache[sym] };
+                }
                 
-                if (cachedName && cachedName !== sym) {
-                    displayName = cachedName;
-                } else if (item.name && item.name !== 'N/A' && item.name !== sym) {
-                    displayName = item.name;
+                // 2. Agar Backend ne naam bheja hai (aur wo valid hai), use karo
+                if (item.name && item.name !== 'N/A' && item.name.toUpperCase() !== sym) {
+                    return { ...item, name: item.name };
                 }
 
-                return { ...item, name: displayName };
+                // 3. Kuch nahi mila? To Symbol hi dikhao (Fetching... mat dikhana)
+                return { ...item, name: item.symbol }; 
             });
 
             setHoldings(mergedData);
             
-            // Trigger Name Fetch for missing items
+            // Background me missing names dhoondo
             fetchMissingNames(mergedData);
 
         } catch (error) { 
-            console.error("❌ Error fetching portfolio:", error);
+            console.error(error);
         } 
         finally { if (!isBackground) setLoading(false); }
     };
 
+    // --- BACKGROUND NAME WORKER ---
     const fetchMissingNames = async (currentHoldings) => {
         if (fetchingNamesRef.current) return;
         
-        // Find stocks with NO NAME
-        const stocksToFetch = currentHoldings.filter(h => !h.name || h.name === '');
+        // Un stocks ko dhundo jinka naam == symbol hai (matlab asli naam nahi mila)
+        // Aur jo Cache me bhi nahi hain
+        const stocksToFetch = currentHoldings.filter(h => {
+            const sym = h.symbol.toUpperCase();
+            if (nameCache[sym]) return false; // Already cached
+            
+            // Check invalid names
+            return !h.name || h.name === 'N/A' || h.name.toUpperCase() === sym;
+        });
         
         if (stocksToFetch.length === 0) return;
         
@@ -106,56 +112,55 @@ export default function Portfolio({ token, isDarkMode }) {
         let newNames = {};
         let updatesFound = false;
         
+        // Loop chalayenge taaki backend block na kare (Sequential Fetch)
         for (const stock of stocksToFetch) {
             try {
-                // Short delay to prevent blocking
-                await new Promise(r => setTimeout(r, 200));
+                // 300ms delay taaki backend "Rate Limit" na de
+                await new Promise(r => setTimeout(r, 300));
 
                 const res = await axios.get(`${API_URL}/api/search-stock?query=${stock.symbol}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
                 if (res.data && res.data.length > 0) {
-                    // Try to find exact match first, else take first
-                    let match = res.data.find(s => s.symbol.toUpperCase() === stock.symbol.toUpperCase());
-                    if (!match) match = res.data[0];
+                    // Search result ka pehla item sabse relevant hota hai
+                    const bestMatch = res.data[0];
 
-                    if (match && match.name) {
-                        const cleanName = match.name;
-                        // Avoid saving if name is same as symbol
-                        if (cleanName.toUpperCase() !== stock.symbol.toUpperCase()) {
-                            newNames[stock.symbol.toUpperCase()] = cleanName;
+                    if (bestMatch && bestMatch.name) {
+                        const cleanName = bestMatch.name;
+                        const sym = stock.symbol.toUpperCase();
+                        
+                        // Sirf tab save karo agar naam symbol se alag ho
+                        if (cleanName.toUpperCase() !== sym) {
+                            newNames[sym] = cleanName;
                             updatesFound = true;
                         }
                     }
                 }
-            } catch (err) { console.warn(`Skipping ${stock.symbol}`); }
+            } catch (err) { 
+                // Silent fail (User ko error mat dikhao)
+            }
         }
         
         if (updatesFound) {
-            // Update Cache
+            // 1. Update Cache State
             const updatedCache = { ...nameCache, ...newNames };
             setNameCache(updatedCache);
-            localStorage.setItem('stockNames', JSON.stringify(updatedCache));
+            
+            // 2. Save to Browser (Permanent)
+            localStorage.setItem('companyNames', JSON.stringify(updatedCache));
 
-            // Update State Immediately
+            // 3. Update UI Immediately
             setHoldings(prev => prev.map(h => {
-                if (newNames[h.symbol.toUpperCase()]) {
-                    return { ...h, name: newNames[h.symbol.toUpperCase()] };
+                const sym = h.symbol.toUpperCase();
+                if (newNames[sym]) {
+                    return { ...h, name: newNames[sym] };
                 }
                 return h;
             }));
         }
         
         fetchingNamesRef.current = false;
-    };
-
-    // Manual Refresh Handler
-    const handleRefreshNames = () => {
-        localStorage.removeItem('stockNames'); // Clear bad cache
-        setNameCache({});
-        fetchPortfolio(false);
-        toast.success("Refreshing Names...");
     };
 
     useEffect(() => { 
@@ -166,7 +171,7 @@ export default function Portfolio({ token, isDarkMode }) {
         }
     }, [token]);
 
-    // --- SEARCH & TRADE ---
+    // --- SEARCH & TRADE LOGIC (Same as before) ---
     useEffect(() => {
         const delay = setTimeout(async () => {
             if (txn.symbol.length > 1 && showSuggestions) {
@@ -219,7 +224,7 @@ export default function Portfolio({ token, isDarkMode }) {
         return symbolMatch || nameMatch;
     });
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div></div>;
+    if (loading) return <PortfolioSkeleton isDarkMode={isDarkMode} />;
 
     return (
         <div className={`min-h-screen w-full font-sans bg-transparent ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
@@ -230,13 +235,8 @@ export default function Portfolio({ token, isDarkMode }) {
                         <p className={`text-sm mt-0.5 font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Track your investments</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        {/* Refresh Names Button (Debugging) */}
-                        <button onClick={handleRefreshNames} title="Reload Company Names" className={`p-2 rounded-lg border transition-all active:scale-95 ${isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'}`}>
-                            <Icons.Refresh className="w-4 h-4" />
-                        </button>
-                        
                         <div className="hidden md:block relative">
-                            <input type="text" placeholder="Filter..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`pl-9 pr-4 py-2 rounded-lg text-sm border font-medium outline-none w-64 transition-all focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-900 border-slate-700 focus:border-indigo-500 text-white placeholder-slate-500' : 'bg-white border-slate-300 focus:border-indigo-500 text-slate-900 placeholder-slate-400'}`} />
+                            <input type="text" placeholder="Filter holdings..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`pl-9 pr-4 py-2 rounded-lg text-sm border font-medium outline-none w-64 transition-all focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-900 border-slate-700 focus:border-indigo-500 text-white placeholder-slate-500' : 'bg-white border-slate-300 focus:border-indigo-500 text-slate-900 placeholder-slate-400'}`} />
                             <Icons.Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
                         </div>
                         <button onClick={() => setShowBottomSheet(true)} className="md:hidden flex items-center justify-center p-2 bg-indigo-600 text-white rounded-lg active:scale-95 transition-transform">
@@ -249,7 +249,7 @@ export default function Portfolio({ token, isDarkMode }) {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Summary Card */}
+                        {/* Summary Cards */}
                         <div className={`rounded-xl border p-6 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
@@ -261,6 +261,18 @@ export default function Portfolio({ token, isDarkMode }) {
                                         {totalPnL >= 0 ? '+' : ''}₹{formatPrice(Math.abs(totalPnL))} ({pnlPercentage}%)
                                     </div>
                                 </div>
+                                <div className="flex flex-col justify-end">
+                                    <div className="flex justify-between text-sm mb-2 font-bold">
+                                        <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Invested (INR)</span>
+                                        <span className={`font-mono ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>₹{formatPrice(totalInvested)}</span>
+                                    </div>
+                                    <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800">
+                                        {holdings.map((h, i) => {
+                                            const width = totalInvested > 0 ? ((h.quantity * h.avg_price * (h.usd_rate_used || 1)) / totalInvested) * 100 : 0;
+                                            return <div key={i} style={{ width: `${width}%` }} className={colors[i % colors.length]} />;
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -268,6 +280,10 @@ export default function Portfolio({ token, isDarkMode }) {
                         <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                             <div className={`p-4 border-b flex justify-between items-center ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Holdings ({filteredHoldings.length})</h3>
+                                <div className="md:hidden relative w-36">
+                                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`w-full pl-7 pr-2 py-1 text-xs font-medium rounded border bg-transparent outline-none ${isDarkMode ? 'border-slate-700 text-white placeholder-slate-600' : 'border-slate-300 text-slate-900 placeholder-slate-500'}`} />
+                                    <Icons.Search className={`w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`} />
+                                </div>
                             </div>
                             
                             <div className="hidden md:block overflow-x-auto">
@@ -299,16 +315,11 @@ export default function Portfolio({ token, isDarkMode }) {
                                                                 <div className={`w-1 h-6 rounded-full ${colors[i % colors.length]}`}></div>
                                                                 <div>
                                                                     <span className={`font-bold block text-sm ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{h.symbol}</span>
-                                                                    {/* ✅ Name Display Logic Updated */}
-                                                                    {h.name ? (
-                                                                        <span className={`text-[10px] font-medium truncate max-w-[180px] block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                                            {h.name}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="text-[10px] font-medium text-amber-500 animate-pulse block">
-                                                                            Fetching Name...
-                                                                        </span>
-                                                                    )}
+                                                                    
+                                                                    {/* NO "FETCHING..." TEXT. Just Name or Symbol */}
+                                                                    <span className={`text-[10px] font-medium truncate max-w-[150px] block ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                                                                        {h.name}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -349,11 +360,8 @@ export default function Portfolio({ token, isDarkMode }) {
                                                     </div>
                                                     <div>
                                                         <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.symbol}</h4>
-                                                        {h.name ? (
-                                                            <p className={`text-xs font-medium truncate max-w-[120px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{h.name}</p>
-                                                        ) : (
-                                                            <p className="text-xs text-amber-500 animate-pulse">Fetching...</p>
-                                                        )}
+                                                        {/* No "Fetching..." here either */}
+                                                        <p className={`text-xs font-medium truncate max-w-[120px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>{h.name}</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
@@ -362,6 +370,11 @@ export default function Portfolio({ token, isDarkMode }) {
                                                         {pnl >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
                                                     </div>
                                                 </div>
+                                            </div>
+                                            <div className={`flex justify-between text-xs font-medium p-2.5 rounded-lg ${isDarkMode ? 'bg-slate-950 text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+                                                <span>Qty: <span className={isDarkMode ? 'text-slate-200' : 'text-slate-900'}>{h.quantity}</span></span>
+                                                <span>Avg: <span className={isDarkMode ? 'text-slate-200' : 'text-slate-900'}>{sym}{formatPrice(h.avg_price)}</span></span>
+                                                <span>LTP: <span className={isDarkMode ? 'text-slate-200' : 'text-slate-900'}>{sym}{formatPrice(h.current_price || h.avg_price)}</span></span>
                                             </div>
                                         </div>
                                     );
@@ -442,4 +455,8 @@ function TradeForm({ txn, setTxn, handleTransaction, showSuggestions, setShowSug
             <button type="submit" className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-all active:scale-95">Execute Order</button>
         </form>
     );
+}
+
+function PortfolioSkeleton({ isDarkMode }) {
+    return (<div className={`min-h-screen p-8 bg-transparent`}><div className="max-w-7xl mx-auto space-y-6 animate-pulse"><div className="h-14 bg-slate-200 dark:bg-slate-800 rounded-lg w-full"></div><div className="grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-2 space-y-6"><div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-xl"></div><div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-xl"></div></div><div className="hidden lg:block h-80 bg-slate-200 dark:bg-slate-800 rounded-xl"></div></div></div></div>);
 }
