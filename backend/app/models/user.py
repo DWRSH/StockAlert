@@ -5,33 +5,32 @@ from datetime import datetime
 
 # 1. Database Model
 class User(Document):
-    # Indexed se DB search fast hoti hai aur duplicate email nahi aayenge
+    # ... (Your existing fields: email, hashed_password, is_verified, etc.) ...
     email: Indexed(EmailStr, unique=True) 
     hashed_password: str
-    
-    # Email Verification Fields
     is_verified: bool = False
     verification_token: Optional[str] = None
     verification_sent_at: Optional[datetime] = None
-
-    # Role Field (Admin/User)
     role: str = "user" 
-
-    # ✅ NEW: Status Field (Admin Dashboard ke liye zaroori)
-    # Default True rahega, agar False hua toh user login nahi kar payega
     is_active: bool = True
-
-    # Telegram Integration
     telegram_id: Optional[str] = None 
-    
-    # Audit Trail
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # ✅ ADD THESE TWO NEW FIELDS FOR RESET PASSWORD
+    reset_otp: Optional[str] = None
+    reset_otp_expires: Optional[datetime] = None
 
     class Settings:
         name = "users"
 
-# 2. Input Validation Model (Auth Routes ke liye)
+# 2. Input Validation Model (No changes needed here for now)
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
     name: Optional[str] = None
+
+# ✅ ADD THIS NEW SCHEMA FOR PASSWORD RESET REQUEST
+class ResetRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
