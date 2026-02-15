@@ -3,11 +3,15 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import JWTError, jwt
 import secrets
+import random
+from datetime import datetime, timedelta
 
 # Models & Utils
-from app.models.user import User, UserRegister
+# ✅ Added ResetRequest here
+from app.models.user import User, UserRegister, ResetRequest
 from app.core.security import get_password_hash, verify_password, create_access_token
-from app.utils.email import send_verification_email
+# ✅ Added send_reset_otp_email here
+from app.utils.email import send_verification_email, send_reset_otp_email
 from app.core.config import settings
 
 router = APIRouter()
@@ -41,7 +45,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 # ==========================================
 @router.post("/register")
 async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
-    # ✅ FIX: Register karte waqt hi email ko lowercase kar dein
     clean_email = user_data.email.strip().lower()
 
     # Check if user already exists
@@ -55,7 +58,7 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
     
     # Create User in DB
     new_user = User(
-        email=clean_email, # Save clean email
+        email=clean_email,
         hashed_password=hashed_pass,
         is_verified=False,
         verification_token=token,
@@ -68,44 +71,38 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
     return {"msg": "Registration successful! Please check email to verify."}
 
 # ==========================================
-# 2. LOGIN ROUTE (Fixed & Debugged)
+# 2. LOGIN ROUTE
 # ==========================================
 @router.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # 1. Clean Input
     email_input = form_data.username.strip().lower()
     
     print(f"\n🔍 LOGIN DEBUG: Attempting to login with -> '{email_input}'")
 
-    # 2. Try Exact Match First (Fastest)
+    # Try Exact Match
     user = await User.find_one(User.email == email_input)
     
-    # 3. Agar nahi mila, to Case-Insensitive Search karo (Safety Net)
+    # Fallback to Case-Insensitive
     if not user:
         print("⚠️ Exact match failed. Trying case-insensitive search...")
         user = await User.find_one({"email": {"$regex": f"^{email_input}$", "$options": "i"}})
 
-    # 4. Check User
     if not user:
         print("❌ DB Result: User NOT FOUND")
-        # Security reason se hum generic message dete hain, par console me pata chal jayega
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
     print(f"✅ DB Result: User FOUND ({user.email})")
 
-    # 5. Verify Password
     if not verify_password(form_data.password, user.hashed_password):
         print("❌ Password Check: FAILED")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
-    # 6. Check Verification
     if not user.is_verified:
-        print("❌ Verification Check: FAILED (Email not verified)")
+        print("❌ Verification Check: FAILED")
         raise HTTPException(status_code=403, detail="Email not verified.")
     
-    print("✅ Password & Verification: SUCCESS. Generating Token...")
+    print("✅ Login SUCCESS. Generating Token...")
 
-    # Generate Token
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -126,7 +123,64 @@ async def verify_email(token: str):
     return RedirectResponse(url=f"{settings.FRONTEND_URL}?verified=true")
 
 # ==========================================
-# 4. GET USER PROFILE
+# 4. FORGOT PASSWORD (Generate OTP)
+# ==========================================
+@router.post("/forgot-password")
+async def forgot_password(email: str):
+    clean_email = email.strip().lower()
+    user = await User.find_one(User.email == clean_email)
+    
+    if not user:
+        # Security: Return 404 for now so you can debug
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Generate 6 Digit OTP
+    otp = str(random.randint(100000, 999999))
+    
+    # Save to DB
+    user.reset_otp = otp
+    user.reset_otp_expires = datetime.utcnow() + timedelta(minutes=10)
+    await user.save()
+
+    # Send Email via Brevo (using email.py logic)
+    email_sent = await send_reset_otp_email(clean_email, otp)
+    
+    if email_sent:
+        return {"msg": f"OTP sent to {clean_email}"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to send email. Check SMTP settings.")
+
+# ==========================================
+# 5. RESET PASSWORD (Verify OTP & Change)
+# ==========================================
+@router.post("/reset-password")
+async def reset_password_confirm(req: ResetRequest):
+    clean_email = req.email.strip().lower()
+    user = await User.find_one(User.email == clean_email)
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Validate OTP
+    if not user.reset_otp or user.reset_otp != req.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    
+    # Validate Expiry
+    if not user.reset_otp_expires or datetime.utcnow() > user.reset_otp_expires:
+        raise HTTPException(status_code=400, detail="OTP Expired")
+
+    # Update Password
+    user.hashed_password = get_password_hash(req.new_password)
+    
+    # Clear OTP fields
+    user.reset_otp = None
+    user.reset_otp_expires = None
+    await user.save()
+    
+    return {"msg": "Password reset successful! You can login now."}
+
+# ==========================================
+# 6. GET USER PROFILE
 # ==========================================
 @router.get("/getuser") 
 async def get_user_profile(current_user: User = Depends(get_current_user)):
