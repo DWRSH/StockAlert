@@ -5,7 +5,6 @@ from datetime import datetime
 
 # 1. Database Model
 class User(Document):
-    # ... (Your existing fields: email, hashed_password, is_verified, etc.) ...
     email: Indexed(EmailStr, unique=True) 
     hashed_password: str
     is_verified: bool = False
@@ -16,20 +15,24 @@ class User(Document):
     telegram_id: Optional[str] = None 
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    # ✅ ADD THESE TWO NEW FIELDS FOR RESET PASSWORD
+    # Forgot Password Fields
     reset_otp: Optional[str] = None
     reset_otp_expires: Optional[datetime] = None
+
+    # 🛡️ RATE LIMITING FIELDS (Ye 3 lines add karein)
+    otp_attempts: int = 0                  # Kitni baar galat OTP dala?
+    lockout_until: Optional[datetime] = None # Kab tak account blocked hai?
+    last_otp_request: Optional[datetime] = None # Pichla OTP kab bheja tha?
 
     class Settings:
         name = "users"
 
-# 2. Input Validation Model (No changes needed here for now)
+# 2. Input Validation Models
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
     name: Optional[str] = None
 
-# ✅ ADD THIS NEW SCHEMA FOR PASSWORD RESET REQUEST
 class ResetRequest(BaseModel):
     email: EmailStr
     otp: str
