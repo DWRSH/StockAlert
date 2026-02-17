@@ -1,322 +1,308 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ✅ Path same rakha hai
+// ✅ Ensure path is correct
 import { API_URL } from './utils/helpers'; 
 
-// --- ICONS ---
-const LogoIcon = () => <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-const MailIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
-const LockIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25 2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
-const KeyIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.87-1.521-1.412-2.596-1.412A4.5 4.5 0 0 1 4.5 10.5a4.5 4.5 0 0 1 4.5 4.5c0 1.075.542 2.033 1.412 2.596a6 6 0 1 1 5.912-7.029Zm0 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-const CheckIcon = () => <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-const ArrowRight = () => <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-const ArrowLeft = () => <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
+// --- ULTRA PREMIUM ICONS ---
+const LogoIcon = () => (
+  <svg className="w-8 h-8 text-white drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+  </svg>
+);
+const MailIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>;
+const LockIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25 2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>;
+const CheckIcon = () => <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>;
+const ArrowLeft = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>;
+const Spinner = () => <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 
 export default function AuthPage({ onLogin }) {
-  // Modes: 'login', 'register', 'forgot', 'reset'
   const [authMode, setAuthMode] = useState('login'); 
-  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');           // For Reset
-  const [newPassword, setNewPassword] = useState(''); // For Reset
+  
+  // 📦 OTP STATE (6 Digits)
+  const [otp, setOtp] = useState(new Array(6).fill(""));
+  const [newPassword, setNewPassword] = useState(''); 
 
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const otpRefs = useRef([]);
 
-  // Check URL for Verification Success
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('verified') === 'true') {
-      setSuccessMsg("Email Verified Successfully! You can now login.");
+      setSuccessMsg("Email Verified! Login to continue.");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     if (params.get('error') === 'invalid_token') {
-      setError("Invalid or Expired Verification Link.");
+      setError("Invalid or Expired Link.");
     }
   }, []);
 
-  const clearMessages = () => {
-    setError('');
-    setSuccessMsg('');
-  };
+  const clearMessages = () => { setError(''); setSuccessMsg(''); };
 
   const switchMode = (mode) => {
     setAuthMode(mode);
     clearMessages();
   };
 
+  // --- 📦 OTP LOGIC ---
+  const handleOtpChange = (e, index) => {
+    const value = e.target.value;
+    if (isNaN(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.substring(value.length - 1);
+    setOtp(newOtp);
+    if (value && index < 5) otpRefs.current[index + 1].focus();
+  };
+
+  const handleOtpKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) otpRefs.current[index - 1].focus();
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const data = e.clipboardData.getData("text").slice(0, 6).split("");
+    if (data.length === 6) { setOtp(data); otpRefs.current[5].focus(); }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     clearMessages();
-
     try {
-      // ==========================
-      // 1. LOGIN
-      // ==========================
       if (authMode === 'login') {
         const formData = new FormData();
         formData.append('username', email);
         formData.append('password', password);
-        
         const res = await axios.post(`${API_URL}/api/auth/token`, formData);
         localStorage.setItem('token', res.data.access_token);
         onLogin(); 
       } 
-      // ==========================
-      // 2. REGISTER
-      // ==========================
       else if (authMode === 'register') {
         const res = await axios.post(`${API_URL}/api/auth/register`, { email, password });
         switchMode('login');
-        setSuccessMsg(res.data.msg || "Account Created! Check your email to verify.");
+        setSuccessMsg(res.data.msg || "Account created! Verify email.");
         setEmail(''); setPassword('');
       }
-      // ==========================
-      // 3. FORGOT PASSWORD (Send OTP)
-      // ==========================
       else if (authMode === 'forgot') {
-        const res = await axios.post(`${API_URL}/api/auth/forgot-password?email=${email}`);
-        setSuccessMsg(`OTP sent to ${email}. Check inbox.`);
-        setAuthMode('reset'); // Move to next step
+        await axios.post(`${API_URL}/api/auth/forgot-password?email=${email}`);
+        setSuccessMsg(`OTP sent to ${email}`);
+        setAuthMode('reset'); 
       }
-      // ==========================
-      // 4. RESET PASSWORD (Verify OTP)
-      // ==========================
       else if (authMode === 'reset') {
-        await axios.post(`${API_URL}/api/auth/reset-password`, {
-            email,
-            otp,
-            new_password: newPassword
-        });
-        setSuccessMsg("Password Reset Successful! Please Login.");
-        setAuthMode('login'); // Back to login
-        setPassword(''); setOtp(''); setNewPassword('');
+        const finalOtp = otp.join(""); 
+        if(finalOtp.length !== 6) throw new Error("Enter full 6-digit OTP");
+        await axios.post(`${API_URL}/api/auth/reset-password`, { email, otp: finalOtp, new_password: newPassword });
+        setSuccessMsg("Reset Successful! Please Login.");
+        setAuthMode('login'); 
+        setPassword(''); setOtp(new Array(6).fill("")); setNewPassword('');
       }
-
     } catch (err) {
-      console.error("Auth Error:", err);
-      if (err.response) {
-        setError(err.response.data.detail || "Request Failed");
-      } else {
-        setError("Server Error. Is backend running?");
-      }
+      setError(err.message === "Enter full 6-digit OTP" ? err.message : (err.response?.data?.detail || "Server Error."));
     }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020617] p-4 font-sans text-slate-200 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#020617] text-slate-200 font-sans selection:bg-indigo-500/30 overflow-hidden relative">
       
-      {/* 🎨 Animated Ambient Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div 
-            animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }} 
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] bg-indigo-600/20 rounded-full blur-[120px]" 
-          />
-          <motion.div 
-            animate={{ scale: [1, 1.3, 1], rotate: [0, -90, 0] }} 
-            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] bg-blue-500/10 rounded-full blur-[120px]" 
-          />
+      {/* 🌌 AURORA BACKGROUND */}
+      <div className="absolute inset-0 z-0">
+         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] opacity-40 animate-pulse" />
+         <div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#0f172a] via-[#020617] to-[#020617]" />
+         {/* Grid Texture */}
+         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-[0.1]" />
       </div>
 
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md relative z-10"
+        layout
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
+        className="relative z-10 w-full max-w-[420px] px-6"
       >
-        {/* Header */}
-        <div className="text-center mb-8">
-          <motion.div 
-            initial={{ y: -20 }} animate={{ y: 0 }}
-            className="inline-flex items-center justify-center p-4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl mb-5"
-          >
-            <LogoIcon />
-          </motion.div>
-          <h1 className="text-4xl font-black text-white tracking-tight">Stock<span className="text-indigo-500">Watcher</span></h1>
-          <p className="text-slate-500 text-sm font-medium mt-2 tracking-wide uppercase">Real-time Market Intelligence</p>
-        </div>
-
-        <div className="bg-[#0f172a]/60 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden relative">
+        {/* 💎 BLACK GLASS CARD */}
+        <div className="bg-[#0f172a]/40 backdrop-blur-3xl border border-white/10 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden ring-1 ring-white/5">
           
-          {/* ✨ Sliding Tab Switcher (Visible only for Login/Register) */}
-          {(authMode === 'login' || authMode === 'register') && (
-            <div className="flex p-1.5 m-1.5 bg-black/20 rounded-2xl relative">
-                <motion.div 
-                    className="absolute top-1.5 bottom-1.5 bg-indigo-600 rounded-xl shadow-lg z-0"
+          {/* Header */}
+          <div className="pt-10 pb-6 text-center">
+            <motion.div 
+              whileHover={{ scale: 1.1 }}
+              className="w-16 h-16 mx-auto bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_-5px_rgba(99,102,241,0.6)] mb-6 border border-white/10"
+            >
+              <LogoIcon />
+            </motion.div>
+            <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
+              Stock<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Watcher</span>
+            </h1>
+            <p className="text-slate-400 text-sm font-medium tracking-wide">
+              {authMode === 'login' && "Market Intelligence Awaits"}
+              {authMode === 'register' && "Smart Stock Monitoring System"}
+              {authMode === 'forgot' && "Recover Account Access"}
+              {authMode === 'reset' && "Secure Your Vault"}
+            </p>
+          </div>
+
+          <div className="px-8 pb-10">
+            {/* 3D Segmented Control */}
+            {(authMode === 'login' || authMode === 'register') && (
+              <div className="flex p-1.5 bg-[#020617]/50 rounded-xl mb-8 border border-white/5 relative shadow-inner">
+                 <motion.div 
+                    className="absolute top-1.5 bottom-1.5 bg-[#1e293b] rounded-lg shadow-[0_2px_10px_rgba(0,0,0,0.5)] border border-white/5 z-0"
                     initial={false}
-                    animate={{ 
-                        left: authMode === 'login' ? '6px' : '50%', 
-                        width: 'calc(50% - 6px)' 
-                    }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-                
-                <button 
-                onClick={() => switchMode('login')}
-                className={`flex-1 py-3 text-sm font-bold rounded-xl relative z-10 transition-colors ${authMode === 'login' ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                Sign In
-                </button>
-                <button 
-                onClick={() => switchMode('register')}
-                className={`flex-1 py-3 text-sm font-bold rounded-xl relative z-10 transition-colors ${authMode === 'register' ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                Sign Up
-                </button>
-            </div>
-          )}
+                    animate={{ left: authMode === 'login' ? '6px' : '50%', width: 'calc(50% - 6px)' }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                 />
+                 <button onClick={() => switchMode('login')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-all z-10 ${authMode === 'login' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>Sign In</button>
+                 <button onClick={() => switchMode('register')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-all z-10 ${authMode === 'register' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>Sign Up</button>
+              </div>
+            )}
 
-          {/* Header for Forgot/Reset Modes */}
-          {(authMode === 'forgot' || authMode === 'reset') && (
-             <div className="p-6 pb-0 flex items-center">
-                <button onClick={() => switchMode('login')} className="text-slate-400 hover:text-white flex items-center text-sm font-semibold transition-colors">
-                    <ArrowLeft /> Back to Login
-                </button>
-                <span className="ml-auto text-sm font-bold text-indigo-400 uppercase tracking-wider">
-                    {authMode === 'forgot' ? 'Recovery' : 'Reset Password'}
-                </span>
-             </div>
-          )}
-
-          <div className="p-8 pt-6">
+            {/* Notification Area */}
             <AnimatePresence mode='wait'>
               {error && (
-                <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
-                  <div className="text-red-500 mt-0.5">⚠️</div>
-                  <p className="text-xs font-bold text-red-400 leading-relaxed">{error}</p>
+                <motion.div initial={{opacity:0, height:0}} animate={{opacity:1, height:'auto'}} exit={{opacity:0, height:0}} className="overflow-hidden mb-6">
+                  <div className="bg-rose-500/10 border-l-4 border-rose-500 text-rose-200 text-xs font-semibold p-4 rounded-r-lg shadow-lg">
+                    {error}
+                  </div>
                 </motion.div>
               )}
               {successMsg && (
-                <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-3">
-                  <CheckIcon />
-                  <p className="text-xs font-bold text-emerald-400 leading-relaxed">{successMsg}</p>
+                <motion.div initial={{opacity:0, height:0}} animate={{opacity:1, height:'auto'}} exit={{opacity:0, height:0}} className="overflow-hidden mb-6">
+                   <div className="bg-emerald-500/10 border-l-4 border-emerald-500 text-emerald-200 text-xs font-semibold p-4 rounded-r-lg shadow-lg">
+                    {successMsg}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6">
               
-              {/* EMAIL FIELD (Available in Login, Register, Forgot, Reset) */}
-              <div className="group">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-indigo-400 transition-colors">Email Address</label>
-                <div className="relative flex items-center">
-                  <div className="absolute left-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"><MailIcon /></div>
-                  <input 
-                    type="email" 
-                    required 
-                    // Reset mode mein email readonly rakho taaki user change na kare
-                    disabled={authMode === 'reset'} 
-                    value={email} 
-                    onChange={(e)=>setEmail(e.target.value)} 
-                    className="w-full py-4 pl-12 pr-4 bg-[#020617]/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium disabled:opacity-50" 
+              {/* Email Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 ml-1 uppercase tracking-wider">Email Address</label>
+                <div className="group relative">
+                    <div className="absolute left-4 top-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                    <MailIcon />
+                    </div>
+                    <input 
+                    type="email" required disabled={authMode === 'reset'} 
+                    value={email} onChange={(e)=>setEmail(e.target.value)} 
+                    className="w-full bg-[#020617]/50 border border-slate-800 text-white text-sm rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 focus:bg-[#0f172a] transition-all placeholder:text-slate-600 font-medium"
                     placeholder="name@company.com"
-                  />
+                    />
                 </div>
               </div>
 
-              {/* PASSWORD FIELD (Login & Register Only) */}
+              {/* Password Input */}
               {(authMode === 'login' || authMode === 'register') && (
-                <div className="group">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-indigo-400 transition-colors">Password</label>
-                    <div className="relative flex items-center">
-                    <div className="absolute left-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"><LockIcon /></div>
-                    <input 
-                        type="password" 
-                        required 
-                        value={password} 
-                        onChange={(e)=>setPassword(e.target.value)} 
-                        className="w-full py-4 pl-12 pr-4 bg-[#020617]/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium" 
-                        placeholder="••••••••"
-                    />
-                    </div>
+                <div className="space-y-1.5">
+                   {/* ✅ FIXED: Forgot Password moved to Top Right of Label */}
+                   <div className="flex justify-between items-center ml-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                        {authMode === 'login' && (
+                            <button type="button" onClick={() => switchMode('forgot')} className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest">
+                                Forgot?
+                            </button>
+                        )}
+                   </div>
+                   
+                   <div className="group relative">
+                      <div className="absolute left-4 top-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                         <LockIcon />
+                      </div>
+                      <input 
+                         type="password" required 
+                         value={password} onChange={(e)=>setPassword(e.target.value)} 
+                         className="w-full bg-[#020617]/50 border border-slate-800 text-white text-sm rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 focus:bg-[#0f172a] transition-all placeholder:text-slate-600 font-medium"
+                         placeholder="••••••••"
+                      />
+                   </div>
                 </div>
               )}
 
-              {/* FORGOT PASSWORD LINK (Login Only) */}
-              {authMode === 'login' && (
-                <div className="flex justify-end -mt-2">
-                    <button 
-                        type="button" 
-                        onClick={() => switchMode('forgot')}
-                        className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
-                    >
-                        Forgot Password?
-                    </button>
-                </div>
-              )}
-
-              {/* RESET FIELDS (Reset Mode Only) */}
+              {/* 📦 OTP VAULT STYLE INPUTS */}
               {authMode === 'reset' && (
                 <>
-                    <div className="group">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-indigo-400 transition-colors">Enter OTP</label>
-                        <div className="relative flex items-center">
-                            <div className="absolute left-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"><KeyIcon /></div>
-                            <input 
-                                type="text" 
-                                required 
-                                value={otp} 
-                                onChange={(e)=>setOtp(e.target.value)} 
-                                maxLength={6}
-                                className="w-full py-4 pl-12 pr-4 bg-[#020617]/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium tracking-widest" 
-                                placeholder="123456"
-                            />
-                        </div>
+                    <div className="space-y-3">
+                         <label className="text-xs font-bold text-slate-500 ml-1 uppercase tracking-widest">Security Code</label>
+                         <div className="flex justify-between gap-2">
+                             {otp.map((digit, index) => (
+                                 <motion.input
+                                     key={index}
+                                     whileFocus={{ scale: 1.05, y: -2 }}
+                                     ref={el => otpRefs.current[index] = el}
+                                     type="text"
+                                     className="w-12 h-14 bg-[#020617] border border-slate-800 rounded-xl text-center text-xl font-bold text-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] focus:border-indigo-500 focus:shadow-[0_0_20px_rgba(99,102,241,0.3)] focus:outline-none transition-all caret-indigo-500"
+                                     value={digit}
+                                     onChange={(e) => handleOtpChange(e, index)}
+                                     onKeyDown={(e) => handleOtpKeyDown(e, index)}
+                                     onPaste={handleOtpPaste}
+                                     maxLength={1}
+                                 />
+                             ))}
+                         </div>
                     </div>
-                    <div className="group">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-indigo-400 transition-colors">New Password</label>
-                        <div className="relative flex items-center">
-                            <div className="absolute left-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"><LockIcon /></div>
+                    
+                    <div className="space-y-1.5 pt-2">
+                        <label className="text-xs font-bold text-slate-500 ml-1 uppercase tracking-wider">New Password</label>
+                        <div className="group relative">
+                            <div className="absolute left-4 top-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                            <LockIcon />
+                            </div>
                             <input 
-                                type="password" 
-                                required 
-                                value={newPassword} 
-                                onChange={(e)=>setNewPassword(e.target.value)} 
-                                className="w-full py-4 pl-12 pr-4 bg-[#020617]/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium" 
-                                placeholder="New Secure Password"
+                                type="password" required 
+                                value={newPassword} onChange={(e)=>setNewPassword(e.target.value)} 
+                                className="w-full bg-[#020617]/50 border border-slate-800 text-white text-sm rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 focus:bg-[#0f172a] transition-all placeholder:text-slate-600 font-medium"
+                                placeholder="Set new password"
                             />
                         </div>
                     </div>
                 </>
               )}
 
-              {/* SUBMIT BUTTON */}
+              {/* CTA Button */}
               <motion.button 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit" 
                 disabled={loading} 
-                className={`w-full group relative flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/25 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_10px_30px_-10px_rgba(99,102,241,0.5)] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 tracking-wide uppercase text-sm"
               >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                      {authMode === 'login' && 'Access Dashboard'}
-                      {authMode === 'register' && 'Create Account'}
-                      {authMode === 'forgot' && 'Send Reset OTP'}
-                      {authMode === 'reset' && 'Reset Password'}
-                      <ArrowRight />
-                  </>
+                {loading ? <Spinner /> : (
+                    <>
+                        {authMode === 'login' && 'Access Dashboard'}
+                        {authMode === 'register' && 'Create Account'}
+                        {authMode === 'forgot' && 'Send Code'}
+                        {authMode === 'reset' && 'Update Password'}
+                    </>
                 )}
               </motion.button>
+              
+              {(authMode === 'forgot' || authMode === 'reset') && (
+                <button 
+                  type="button" 
+                  onClick={() => switchMode('login')} 
+                  className="w-full text-center text-xs font-bold text-slate-500 hover:text-white transition-colors flex items-center justify-center gap-2 mt-4 uppercase tracking-widest"
+                >
+                  <ArrowLeft /> Return to Login
+                </button>
+              )}
             </form>
           </div>
-          
-          <div className="bg-slate-950/50 p-4 text-center border-t border-slate-800">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-                Protected by Enterprise Security
-            </p>
-          </div>
         </div>
+
+        {/* Footer Brand */}
+        <div className="mt-8 text-center opacity-40 hover:opacity-100 transition-opacity">
+           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"/> Enterprise Security
+           </p>
+        </div>
+
       </motion.div>
     </div>
   );
