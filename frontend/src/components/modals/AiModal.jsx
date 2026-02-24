@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CloseIcon, RobotIcon } from '../common/Icons';
 
+const CheckIcon = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+);
+
 // Loading ke time jo text change hoga (Background processing feel dene ke liye)
 const loadingSteps = [
     "Initializing AI engine...",
