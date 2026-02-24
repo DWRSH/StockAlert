@@ -1,64 +1,59 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-// --- 🎨 PREMIUM ICONS ---
+// --- 🎨 MINIMAL ICONS ---
 const CloseIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
-const TrendingIcon = () => <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>;
+const TrendingUp = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>;
+const TrendingDown = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6L9 12.75l4.306-4.307a11.95 11.95 0 015.814 5.519l2.74 1.22m0 0l-5.94 2.28m5.94-2.28l-2.28-5.941" /></svg>;
 
 // --- 🎯 CUSTOM TOOLTIP ---
-const CustomTooltip = ({ active, payload, label, isDarkMode, currencySymbol }) => {
+const CustomTooltip = ({ active, payload, label, isDarkMode, currencySymbol, themeColor }) => {
     if (active && payload && payload.length) {
         return (
-            <motion.div 
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-3 rounded-xl shadow-2xl border backdrop-blur-md ${isDarkMode ? 'bg-[#18181b]/90 border-white/10 text-white' : 'bg-white/90 border-slate-200 text-slate-900'}`}
-            >
+            <div className={`px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md ${isDarkMode ? 'bg-[#18181b]/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
                 <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     {label}
                 </p>
                 <div className="flex items-baseline gap-1">
-                    <span className={`text-xl font-bold ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                        {currencySymbol}{payload[0].value}
+                    <span className="text-xl font-bold font-mono" style={{ color: themeColor }}>
+                        {currencySymbol}{payload[0].value.toFixed(2)}
                     </span>
                 </div>
-            </motion.div>
+            </div>
         );
     }
     return null;
 };
 
-// --- ⚙️ SKELETON LOADER ---
-const ChartSkeleton = ({ isDarkMode }) => (
-    <div className="w-full h-full flex flex-col justify-end gap-1 p-4 pb-8">
-        <div className="w-full flex items-end justify-between h-full gap-2 opacity-50">
-            {[40, 60, 45, 80, 50, 90, 70, 100, 60, 85].map((h, i) => (
-                <motion.div 
-                    key={i}
-                    animate={{ height: [`${h}%`, `${h - 10}%`, `${h}%`] }}
-                    transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1, ease: "easeInOut" }}
-                    className={`flex-1 rounded-t-sm ${isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-500/10'}`}
-                    style={{ height: `${h}%` }}
-                />
-            ))}
-        </div>
-        {/* Fake X-Axis Line */}
-        <div className={`w-full h-px mt-2 ${isDarkMode ? 'bg-white/10' : 'bg-slate-200'}`} />
-    </div>
-);
-
 export default function ChartModal({ selectedStock, setSelectedStock, chartData, isChartLoading, isDarkMode }) {
     
-    // Safety check
     if (!selectedStock) return null;
 
-    // Currency Logic
     const currencySymbol = selectedStock.includes('.') ? '₹' : '$';
+
+    // 🧠 SMART MATH: Calculate Trends & Colors
+    const { isBullish, themeColor, priceDiff, percentChange, lastPrice } = useMemo(() => {
+        if (!chartData || chartData.length === 0) return { isBullish: true, themeColor: '#6366f1', priceDiff: 0, percentChange: 0, lastPrice: 0 };
+        
+        const first = chartData[0].price;
+        const last = chartData[chartData.length - 1].price;
+        const diff = last - first;
+        const percent = ((diff / first) * 100);
+        const bullish = diff >= 0;
+
+        return {
+            isBullish: bullish,
+            themeColor: bullish ? '#10b981' : '#f43f5e', // Emerald for Up, Rose for Down
+            priceDiff: diff,
+            percentChange: percent,
+            lastPrice: last
+        };
+    }, [chartData]);
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                 
                 {/* 🌑 Premium Overlay */}
                 <motion.div 
@@ -66,116 +61,143 @@ export default function ChartModal({ selectedStock, setSelectedStock, chartData,
                     animate={{ opacity: 1 }} 
                     exit={{ opacity: 0 }} 
                     onClick={() => setSelectedStock(null)}
-                    className={`absolute inset-0 backdrop-blur-sm ${isDarkMode ? 'bg-black/70' : 'bg-slate-900/40'}`}
+                    className={`absolute inset-0 backdrop-blur-sm ${isDarkMode ? 'bg-black/80' : 'bg-slate-900/40'}`}
                 />
 
-                {/* 💳 The Chart Card */}
+                {/* 💳 The Robinhood-Style Card */}
                 <motion.div 
-                    initial={{ opacity: 0, scale: 0.96, y: 15 }} 
+                    initial={{ opacity: 0, scale: 0.98, y: 15 }} 
                     animate={{ opacity: 1, scale: 1, y: 0 }} 
-                    exit={{ opacity: 0, scale: 0.96, y: 15 }} 
-                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                    className={`relative w-full max-w-4xl flex flex-col rounded-[24px] shadow-2xl border overflow-hidden z-10 ${isDarkMode ? 'bg-[#09090b] border-white/10' : 'bg-white border-slate-200'}`}
+                    exit={{ opacity: 0, scale: 0.98, y: 15 }} 
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    className={`relative w-full max-w-4xl flex flex-col rounded-3xl shadow-2xl border overflow-hidden z-10 ${isDarkMode ? 'bg-[#09090b] border-[#27272a]' : 'bg-white border-slate-200'}`}
                 >
-                    {/* Header Section */}
-                    <div className={`px-6 py-5 flex items-center justify-between border-b ${isDarkMode ? 'border-white/5 bg-[#121214]' : 'border-slate-100 bg-slate-50/50'}`}>
-                        <div className="flex items-center gap-4">
-                            <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
-                                <TrendingIcon />
-                            </div>
-                            <div className="flex flex-col">
-                                <h2 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                    {selectedStock}
-                                </h2>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="flex h-1.5 w-1.5 relative">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                    
+                    {/* 1. Header & Live Price Section */}
+                    <div className="px-6 pt-6 pb-2 flex justify-between items-start">
+                        <div className="flex flex-col">
+                            <h2 className={`text-sm font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                {selectedStock}
+                            </h2>
+                            
+                            {isChartLoading ? (
+                                <div className={`h-10 w-48 mt-2 rounded-lg animate-pulse ${isDarkMode ? 'bg-white/5' : 'bg-slate-100'}`} />
+                            ) : chartData.length > 0 ? (
+                                <div className="mt-1 flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+                                    <span className={`text-4xl font-bold tracking-tight font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                        {currencySymbol}{lastPrice.toFixed(2)}
                                     </span>
-                                    <p className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                        Historical Performance (30 Days)
-                                    </p>
+                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-bold tracking-wide ${isBullish ? (isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600') : (isDarkMode ? 'bg-rose-500/10 text-rose-400' : 'bg-rose-50 text-rose-600')}`}>
+                                        {isBullish ? <TrendingUp /> : <TrendingDown />}
+                                        {isBullish ? '+' : ''}{currencySymbol}{Math.abs(priceDiff).toFixed(2)} ({isBullish ? '+' : ''}{percentChange.toFixed(2)}%)
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <span className={`text-2xl font-bold mt-2 ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+                                    Data Unavailable
+                                </span>
+                            )}
                         </div>
-                        
+
                         <button 
                             onClick={() => setSelectedStock(null)} 
-                            className={`p-2 rounded-full transition-colors ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-black hover:bg-slate-100'}`}
+                            className={`p-2 rounded-full transition-colors ${isDarkMode ? 'bg-[#18181b] text-slate-400 hover:text-white border border-[#27272a]' : 'bg-slate-50 text-slate-500 hover:text-black border border-slate-200'}`}
                         >
                             <CloseIcon />
                         </button>
                     </div>
 
-                    {/* Chart Container */}
-                    <div className={`w-full p-4 sm:p-6 ${isDarkMode ? 'bg-[#09090b]' : 'bg-white'}`}>
-                        <div className="w-full h-[350px] relative">
-                            {isChartLoading ? (
-                                <ChartSkeleton isDarkMode={isDarkMode} />
-                            ) : chartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        
-                                        {/* Beautiful Gradient Fill */}
-                                        <defs>
-                                            <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={isDarkMode ? 0.4 : 0.2} />
-                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
+                    {/* 2. Timeframe Filters (Visual UI) */}
+                    <div className="px-6 flex items-center gap-2 mt-4 mb-2">
+                        {['1D', '1W', '1M', '3M', '1Y'].map((time) => (
+                            <div 
+                                key={time} 
+                                className={`px-3 py-1 text-xs font-bold rounded-lg cursor-default transition-colors ${time === '1M' ? (isDarkMode ? 'bg-white/10 text-white' : 'bg-slate-800 text-white') : (isDarkMode ? 'text-slate-500' : 'text-slate-400')}`}
+                            >
+                                {time}
+                            </div>
+                        ))}
+                    </div>
 
-                                        {/* Subtle Grid Lines */}
-                                        <CartesianGrid 
-                                            strokeDasharray="4 4" 
-                                            vertical={false} 
-                                            stroke={isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 
-                                        />
+                    {/* 3. The Chart Container */}
+                    <div className="w-full h-[360px] relative">
+                        {isChartLoading ? (
+                            // High-End Skeleton Loading
+                            <div className="w-full h-full flex items-end px-6 pb-8 gap-2 opacity-40">
+                                {[30, 45, 40, 60, 50, 80, 70, 95, 85, 100].map((h, i) => (
+                                    <motion.div 
+                                        key={i}
+                                        animate={{ height: [`${h}%`, `${h - 15}%`, `${h}%`] }}
+                                        transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1, ease: "easeInOut" }}
+                                        className={`flex-1 rounded-t-sm ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}
+                                        style={{ height: `${h}%` }}
+                                    />
+                                ))}
+                            </div>
+                        ) : chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+                                    
+                                    {/* Dynamic Gradient based on Trend */}
+                                    <defs>
+                                        <linearGradient id="colorDynamic" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor={themeColor} stopOpacity={isDarkMode ? 0.3 : 0.2} />
+                                            <stop offset="95%" stopColor={themeColor} stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
 
-                                        <XAxis 
-                                            dataKey="date" 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                            tick={{ fontSize: 11, fontWeight: 500, fill: isDarkMode ? '#71717a' : '#94a3b8' }} 
-                                            dy={15} 
-                                            minTickGap={30}
-                                        />
-                                        
-                                        <YAxis 
-                                            domain={['auto', 'auto']} 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                            tick={{ fontSize: 11, fontWeight: 500, fill: isDarkMode ? '#71717a' : '#94a3b8' }} 
-                                            tickFormatter={(val) => `${currencySymbol}${val}`} 
-                                            dx={-10}
-                                        />
-                                        
-                                        {/* Custom Interactive Tooltip */}
-                                        <Tooltip 
-                                            content={<CustomTooltip isDarkMode={isDarkMode} currencySymbol={currencySymbol} />} 
-                                            cursor={{ stroke: isDarkMode ? '#6366f1' : '#818cf8', strokeWidth: 1, strokeDasharray: '4 4' }} 
-                                        />
-                                        
-                                        {/* The Main Line & Area */}
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey="price" 
-                                            stroke="#6366f1" 
-                                            strokeWidth={3} 
-                                            fill="url(#colorPrice)" 
-                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#6366f1' }}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center">
-                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-white/5' : 'bg-slate-100'}`}>
-                                        <svg className={`w-8 h-8 ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z" /></svg>
-                                    </div>
-                                    <p className={`text-sm font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>No Market Data Available</p>
-                                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>The market might be closed or data is missing.</p>
-                                </div>
-                            )}
-                        </div>
+                                    {/* Very subtle grid lines */}
+                                    <CartesianGrid 
+                                        strokeDasharray="4 4" 
+                                        vertical={false} 
+                                        stroke={isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'} 
+                                    />
+
+                                    {/* X-Axis: Hidden lines, clean text */}
+                                    <XAxis 
+                                        dataKey="date" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fontSize: 10, fontWeight: 600, fill: isDarkMode ? '#52525b' : '#94a3b8' }} 
+                                        dy={10} 
+                                        minTickGap={40}
+                                    />
+                                    
+                                    {/* Y-Axis: Moved to Right (Like real trading apps) */}
+                                    <YAxis 
+                                        orientation="right"
+                                        domain={['dataMin - 5', 'dataMax + 5']} 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fontSize: 10, fontWeight: 600, fill: isDarkMode ? '#52525b' : '#94a3b8', fontFamily: 'monospace' }} 
+                                        tickFormatter={(val) => `${val.toFixed(0)}`} 
+                                        dx={10}
+                                    />
+                                    
+                                    {/* Crosshair & Tooltip */}
+                                    <Tooltip 
+                                        content={<CustomTooltip isDarkMode={isDarkMode} currencySymbol={currencySymbol} themeColor={themeColor} />} 
+                                        cursor={{ stroke: themeColor, strokeWidth: 1.5, strokeDasharray: '4 4' }} 
+                                    />
+                                    
+                                    {/* The Line */}
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey="price" 
+                                        stroke={themeColor} 
+                                        strokeWidth={3} 
+                                        fill="url(#colorDynamic)" 
+                                        activeDot={{ r: 6, strokeWidth: 2, stroke: isDarkMode ? '#09090b' : '#ffffff', fill: themeColor }}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <p className={`text-sm font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+                                    No Historical Data
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             </div>
