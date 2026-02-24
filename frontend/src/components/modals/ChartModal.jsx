@@ -1,25 +1,23 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-// --- 🎨 MINIMAL ICONS ---
-const CloseIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
-const TrendingUp = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>;
-const TrendingDown = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6L9 12.75l4.306-4.307a11.95 11.95 0 015.814 5.519l2.74 1.22m0 0l-5.94 2.28m5.94-2.28l-2.28-5.941" /></svg>;
+// --- 🎨 ULTRA-MINIMAL ICONS ---
+const CloseIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
+const ArrowUp = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" /></svg>;
+const ArrowDown = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 4.5l15 15m0 0V8.25m0 11.25H8.25" /></svg>;
 
-// --- 🎯 CUSTOM TOOLTIP ---
-const CustomTooltip = ({ active, payload, label, isDarkMode, currencySymbol, themeColor }) => {
+// --- 🎯 INVISIBLE TOOLTIP (Pure Data Focus) ---
+const CustomTooltip = ({ active, payload, label, isDarkMode, currencySymbol }) => {
     if (active && payload && payload.length) {
         return (
-            <div className={`px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md ${isDarkMode ? 'bg-[#18181b]/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
-                <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <div className={`px-3 py-2 rounded-lg shadow-xl border ${isDarkMode ? 'bg-[#18181b] border-[#27272a] text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+                <p className={`text-[10px] uppercase tracking-wider mb-0.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                     {label}
                 </p>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold font-mono" style={{ color: themeColor }}>
-                        {currencySymbol}{payload[0].value.toFixed(2)}
-                    </span>
-                </div>
+                <p className="text-sm font-semibold font-mono">
+                    {currencySymbol}{payload[0].value.toFixed(2)}
+                </p>
             </div>
         );
     }
@@ -32,22 +30,21 @@ export default function ChartModal({ selectedStock, setSelectedStock, chartData,
 
     const currencySymbol = selectedStock.includes('.') ? '₹' : '$';
 
-    // 🧠 SMART MATH: Calculate Trends & Colors
-    const { isBullish, themeColor, priceDiff, percentChange, lastPrice } = useMemo(() => {
-        if (!chartData || chartData.length === 0) return { isBullish: true, themeColor: '#6366f1', priceDiff: 0, percentChange: 0, lastPrice: 0 };
+    // 🧠 Pure Data Math
+    const { isBullish, priceDiff, percentChange, lastPrice, firstPrice } = useMemo(() => {
+        if (!chartData || chartData.length === 0) return { isBullish: true, priceDiff: 0, percentChange: 0, lastPrice: 0, firstPrice: 0 };
         
         const first = chartData[0].price;
         const last = chartData[chartData.length - 1].price;
         const diff = last - first;
         const percent = ((diff / first) * 100);
-        const bullish = diff >= 0;
 
         return {
-            isBullish: bullish,
-            themeColor: bullish ? '#10b981' : '#f43f5e', // Emerald for Up, Rose for Down
+            isBullish: diff >= 0,
             priceDiff: diff,
             percentChange: percent,
-            lastPrice: last
+            lastPrice: last,
+            firstPrice: first
         };
     }, [chartData]);
 
@@ -55,146 +52,111 @@ export default function ChartModal({ selectedStock, setSelectedStock, chartData,
         <AnimatePresence>
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                 
-                {/* 🌑 Premium Overlay */}
+                {/* 🌑 Pure Dim Backdrop */}
                 <motion.div 
                     initial={{ opacity: 0 }} 
                     animate={{ opacity: 1 }} 
                     exit={{ opacity: 0 }} 
                     onClick={() => setSelectedStock(null)}
-                    className={`absolute inset-0 backdrop-blur-sm ${isDarkMode ? 'bg-black/80' : 'bg-slate-900/40'}`}
+                    className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                 />
 
-                {/* 💳 The Robinhood-Style Card */}
+                {/* 💳 The Minimalist Card */}
                 <motion.div 
-                    initial={{ opacity: 0, scale: 0.98, y: 15 }} 
+                    initial={{ opacity: 0, scale: 0.98, y: 10 }} 
                     animate={{ opacity: 1, scale: 1, y: 0 }} 
-                    exit={{ opacity: 0, scale: 0.98, y: 15 }} 
+                    exit={{ opacity: 0, scale: 0.98, y: 10 }} 
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    className={`relative w-full max-w-4xl flex flex-col rounded-3xl shadow-2xl border overflow-hidden z-10 ${isDarkMode ? 'bg-[#09090b] border-[#27272a]' : 'bg-white border-slate-200'}`}
+                    className={`relative w-full max-w-4xl flex flex-col rounded-2xl shadow-2xl border z-10 overflow-hidden ${isDarkMode ? 'bg-[#09090b] border-[#27272a]' : 'bg-white border-slate-200'}`}
                 >
                     
-                    {/* 1. Header & Live Price Section */}
-                    <div className="px-6 pt-6 pb-2 flex justify-between items-start">
+                    {/* 1. Clean Typography Header */}
+                    <div className="px-8 pt-8 pb-4 flex justify-between items-start">
                         <div className="flex flex-col">
-                            <h2 className={`text-sm font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            <h2 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                                 {selectedStock}
                             </h2>
                             
                             {isChartLoading ? (
-                                <div className={`h-10 w-48 mt-2 rounded-lg animate-pulse ${isDarkMode ? 'bg-white/5' : 'bg-slate-100'}`} />
+                                <div className={`h-8 w-32 mt-2 rounded-md animate-pulse ${isDarkMode ? 'bg-[#27272a]' : 'bg-slate-200'}`} />
                             ) : chartData.length > 0 ? (
-                                <div className="mt-1 flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
-                                    <span className={`text-4xl font-bold tracking-tight font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                <div className="mt-1 flex items-baseline gap-3">
+                                    <span className={`text-2xl font-medium font-mono ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                                         {currencySymbol}{lastPrice.toFixed(2)}
                                     </span>
-                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-bold tracking-wide ${isBullish ? (isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600') : (isDarkMode ? 'bg-rose-500/10 text-rose-400' : 'bg-rose-50 text-rose-600')}`}>
-                                        {isBullish ? <TrendingUp /> : <TrendingDown />}
-                                        {isBullish ? '+' : ''}{currencySymbol}{Math.abs(priceDiff).toFixed(2)} ({isBullish ? '+' : ''}{percentChange.toFixed(2)}%)
-                                    </div>
+                                    {/* Subtle Profit/Loss Text (No heavy background pills) */}
+                                    <span className={`flex items-center text-sm font-medium ${isBullish ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                        {isBullish ? <ArrowUp /> : <ArrowDown />}
+                                        {Math.abs(priceDiff).toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)
+                                    </span>
                                 </div>
-                            ) : (
-                                <span className={`text-2xl font-bold mt-2 ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>
-                                    Data Unavailable
-                                </span>
-                            )}
+                            ) : null}
                         </div>
 
                         <button 
                             onClick={() => setSelectedStock(null)} 
-                            className={`p-2 rounded-full transition-colors ${isDarkMode ? 'bg-[#18181b] text-slate-400 hover:text-white border border-[#27272a]' : 'bg-slate-50 text-slate-500 hover:text-black border border-slate-200'}`}
+                            className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'text-slate-500 hover:text-white hover:bg-[#27272a]' : 'text-slate-400 hover:text-black hover:bg-slate-100'}`}
                         >
                             <CloseIcon />
                         </button>
                     </div>
 
-                    {/* 2. Timeframe Filters (Visual UI) */}
-                    <div className="px-6 flex items-center gap-2 mt-4 mb-2">
-                        {['1D', '1W', '1M', '3M', '1Y'].map((time) => (
-                            <div 
-                                key={time} 
-                                className={`px-3 py-1 text-xs font-bold rounded-lg cursor-default transition-colors ${time === '1M' ? (isDarkMode ? 'bg-white/10 text-white' : 'bg-slate-800 text-white') : (isDarkMode ? 'text-slate-500' : 'text-slate-400')}`}
-                            >
-                                {time}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* 3. The Chart Container */}
-                    <div className="w-full h-[360px] relative">
+                    {/* 2. The Naked Chart Container (Zero Distractions) */}
+                    <div className="w-full h-[340px] px-2 pb-6">
                         {isChartLoading ? (
-                            // High-End Skeleton Loading
-                            <div className="w-full h-full flex items-end px-6 pb-8 gap-2 opacity-40">
-                                {[30, 45, 40, 60, 50, 80, 70, 95, 85, 100].map((h, i) => (
-                                    <motion.div 
-                                        key={i}
-                                        animate={{ height: [`${h}%`, `${h - 15}%`, `${h}%`] }}
-                                        transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1, ease: "easeInOut" }}
-                                        className={`flex-1 rounded-t-sm ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}
-                                        style={{ height: `${h}%` }}
-                                    />
-                                ))}
+                            // Clean Line Skeleton
+                            <div className="w-full h-full flex items-center justify-center">
+                                <motion.div 
+                                    animate={{ opacity: [0.2, 0.7, 0.2] }} 
+                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                    className={`w-3/4 h-[2px] rounded-full ${isDarkMode ? 'bg-[#27272a]' : 'bg-slate-200'}`}
+                                />
                             </div>
                         ) : chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+                                <LineChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                                     
-                                    {/* Dynamic Gradient based on Trend */}
-                                    <defs>
-                                        <linearGradient id="colorDynamic" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={themeColor} stopOpacity={isDarkMode ? 0.3 : 0.2} />
-                                            <stop offset="95%" stopColor={themeColor} stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-
-                                    {/* Very subtle grid lines */}
-                                    <CartesianGrid 
-                                        strokeDasharray="4 4" 
-                                        vertical={false} 
-                                        stroke={isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'} 
+                                    {/* Baseline Reference (Shows where the stock started 30 days ago) */}
+                                    <ReferenceLine 
+                                        y={firstPrice} 
+                                        stroke={isDarkMode ? '#27272a' : '#e2e8f0'} 
+                                        strokeDasharray="3 3" 
                                     />
 
-                                    {/* X-Axis: Hidden lines, clean text */}
                                     <XAxis 
                                         dataKey="date" 
                                         axisLine={false} 
                                         tickLine={false} 
-                                        tick={{ fontSize: 10, fontWeight: 600, fill: isDarkMode ? '#52525b' : '#94a3b8' }} 
-                                        dy={10} 
-                                        minTickGap={40}
+                                        tick={{ fontSize: 10, fill: isDarkMode ? '#52525b' : '#94a3b8' }} 
+                                        dy={15} 
+                                        minTickGap={50}
                                     />
                                     
-                                    {/* Y-Axis: Moved to Right (Like real trading apps) */}
                                     <YAxis 
-                                        orientation="right"
-                                        domain={['dataMin - 5', 'dataMax + 5']} 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        tick={{ fontSize: 10, fontWeight: 600, fill: isDarkMode ? '#52525b' : '#94a3b8', fontFamily: 'monospace' }} 
-                                        tickFormatter={(val) => `${val.toFixed(0)}`} 
-                                        dx={10}
+                                        domain={['dataMin', 'dataMax']} 
+                                        hide={true} // Axes hidden for ultra-clean look
                                     />
                                     
-                                    {/* Crosshair & Tooltip */}
                                     <Tooltip 
-                                        content={<CustomTooltip isDarkMode={isDarkMode} currencySymbol={currencySymbol} themeColor={themeColor} />} 
-                                        cursor={{ stroke: themeColor, strokeWidth: 1.5, strokeDasharray: '4 4' }} 
+                                        content={<CustomTooltip isDarkMode={isDarkMode} currencySymbol={currencySymbol} />} 
+                                        cursor={{ stroke: isDarkMode ? '#52525b' : '#cbd5e1', strokeWidth: 1 }} 
                                     />
                                     
-                                    {/* The Line */}
-                                    <Area 
+                                    {/* Crisp, single-color elegant line */}
+                                    <Line 
                                         type="monotone" 
                                         dataKey="price" 
-                                        stroke={themeColor} 
-                                        strokeWidth={3} 
-                                        fill="url(#colorDynamic)" 
-                                        activeDot={{ r: 6, strokeWidth: 2, stroke: isDarkMode ? '#09090b' : '#ffffff', fill: themeColor }}
+                                        stroke={isDarkMode ? '#e4e4e7' : '#0f172a'} 
+                                        strokeWidth={2} 
+                                        dot={false} // No dots, just a smooth line
+                                        activeDot={{ r: 4, fill: isDarkMode ? '#e4e4e7' : '#0f172a', strokeWidth: 0 }}
                                     />
-                                </AreaChart>
+                                </LineChart>
                             </ResponsiveContainer>
                         ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                                <p className={`text-sm font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>
-                                    No Historical Data
+                                <p className={`text-sm ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+                                    No data available
                                 </p>
                             </div>
                         )}
