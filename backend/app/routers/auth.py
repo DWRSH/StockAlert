@@ -36,6 +36,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     user = await User.find_one(User.email == email)
     if user is None:
         raise credentials_exception
+        
+    # 🛑 NAYA BAN CHECK: Agar active nahi hai (Banned hai) toh token reject kar do
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been banned by the Administrator."
+        )
+        
     return user
 
 # ==========================================
@@ -60,7 +68,8 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
         hashed_password=hashed_pass,
         is_verified=False,
         verification_token=token,
-        role="user"
+        role="user",
+        is_active=True # Default active
     )
     await new_user.create()
     
@@ -75,32 +84,29 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks):
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     email_input = form_data.username.strip().lower()
     
-    # print(f"\n🔍 LOGIN DEBUG: Attempting to login with -> '{email_input}'")
-
     # Try Exact Match
     user = await User.find_one(User.email == email_input)
     
     # Fallback to Case-Insensitive
     if not user:
-        # print("⚠️ Exact match failed. Trying case-insensitive search...")
         user = await User.find_one({"email": {"$regex": f"^{email_input}$", "$options": "i"}})
 
     if not user:
-        # print("❌ DB Result: User NOT FOUND")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
-    # print(f"✅ DB Result: User FOUND ({user.email})")
+    # 🛑 NAYA BAN CHECK: Login karne se pehle check karo ki banned toh nahi
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403, 
+            detail="Your account has been banned. Please contact support."
+        )
 
     if not verify_password(form_data.password, user.hashed_password):
-        # print("❌ Password Check: FAILED")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
     if not user.is_verified:
-        # print("❌ Verification Check: FAILED")
         raise HTTPException(status_code=403, detail="Email not verified.")
     
-    # print("✅ Login SUCCESS. Generating Token...")
-
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -129,8 +135,15 @@ async def forgot_password(email: str):
     user = await User.find_one(User.email == clean_email)
     
     if not user:
-        # Security: Generic message to prevent email enumeration
-        return {"msg": f"OTP sent to {clean_email}"}
+        # User Friendly Error (Jaise humne decide kiya tha)
+        raise HTTPException(status_code=404, detail="This email is not registered with us.")
+
+    # 🛑 NAYA BAN CHECK: Banned user password reset na kar paye
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403, 
+            detail="Your account is banned. You cannot reset password."
+        )
 
     # 🛡️ RATE LIMIT: Check if last request was < 60 seconds ago
     if user.last_otp_request:
@@ -174,6 +187,10 @@ async def reset_password_confirm(req: ResetRequest):
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+        
+    # 🛑 NAYA BAN CHECK
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Your account is banned.")
     
     # 🛡️ LOCKOUT CHECK: Kya user blocked hai?
     if user.lockout_until and datetime.utcnow() < user.lockout_until:
