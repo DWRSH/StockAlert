@@ -150,7 +150,7 @@ async def send_verification_email(to_email: str, token: str):
     """
     return send_email_sync(to_email, subject, html_content)
 
-# 3. PASSWORD RESET OTP EMAIL (✅ Added this for your Forgot Password feature)
+# 3. PASSWORD RESET OTP EMAIL
 async def send_reset_otp_email(to_email: str, otp: str):
     subject = "Reset Your Password - StockWatcher 🔐"
     
@@ -189,8 +189,11 @@ async def send_reset_otp_email(to_email: str, otp: str):
     """
     return send_email_sync(to_email, subject, html_content)
 
-# 4. GENERIC / ANNOUNCEMENT EMAIL
+# 4. GENERIC / ANNOUNCEMENT EMAIL (✅ Updated to fix paragraph formatting)
 def send_generic_email(to_email: str, subject: str, body: str):
+    # Convert plain text newlines (\n) to HTML line breaks (<br>)
+    formatted_body = body.replace('\n', '<br>')
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -212,7 +215,7 @@ def send_generic_email(to_email: str, subject: str, body: str):
             </div>
             <div class="content">
                 <div class="announcement-badge">📢 Announcement</div>
-                <p>{body}</p>
+                <p>{formatted_body}</p>
                 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
                 <p style="font-size: 14px; color: #64748b; margin: 0;">
                     Thank you for being a valued member of our community.<br>
