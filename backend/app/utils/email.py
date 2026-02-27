@@ -99,7 +99,7 @@ async def send_email_notification(to_email: str, symbol: str, current_price: flo
                 <a href="{FRONTEND_URL}" class="btn">View Dashboard</a>
             </div>
             <div class="footer">
-                <p>&copy; 2025 Stock Watcher Inc. • Automated Alert System</p>
+                <p>&copy; 2026 Stock Watcher Inc. • Automated Alert System</p>
             </div>
         </div>
     </body>
@@ -142,7 +142,7 @@ async def send_verification_email(to_email: str, token: str):
                 <p style="margin-top: 30px; font-size: 13px; color: #64748b;">If you didn't request this, you can safely ignore this email.</p>
             </div>
             <div class="footer">
-                <p>&copy; 2025 Stock Watcher Inc. • Security Team</p>
+                <p>&copy; 2026 Stock Watcher Inc. • Security Team</p>
             </div>
         </div>
     </body>
@@ -181,7 +181,7 @@ async def send_reset_otp_email(to_email: str, otp: str):
                 <p style="font-size: 14px; color: #64748b;">This code is valid for 10 minutes. Do not share it with anyone.</p>
             </div>
             <div class="footer">
-                <p>&copy; 2025 Stock Watcher Inc. • Security Team</p>
+                <p>&copy; 2026 Stock Watcher Inc. • Security Team</p>
             </div>
         </div>
     </body>
@@ -223,7 +223,7 @@ def send_generic_email(to_email: str, subject: str, body: str):
                 </p>
             </div>
             <div class="footer">
-                <p>&copy; 2025 Stock Watcher Inc. • Official Broadcast</p>
+                <p>&copy; 2026 Stock Watcher Inc. • Official Broadcast</p>
             </div>
         </div>
     </body>
