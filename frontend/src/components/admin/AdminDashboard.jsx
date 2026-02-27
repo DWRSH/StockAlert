@@ -30,6 +30,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
     const fetchAdminData = async () => {
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } };
+            // ✅ FIX: Added '/api' prefix to match backend
             const [statsRes, usersRes] = await Promise.all([
                 axios.get(`${API_URL}/api/admin/stats`, config),
                 axios.get(`${API_URL}/api/admin/users`, config)
@@ -52,6 +53,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
         if(!window.confirm("Are you sure? This will delete the user and all their alerts.")) return;
         const tId = toast.loading("Deleting user...");
         try {
+            // ✅ FIX: Added '/api' prefix
             await axios.delete(`${API_URL}/api/admin/user/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
             setUsers(users.filter(u => u._id !== userId));
             toast.success("User Deleted", { id: tId });
@@ -67,6 +69,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
         setUsers(updatedUsers);
 
         try {
+            // ✅ FIX: Added '/api' prefix
             await axios.patch(`${API_URL}/api/admin/user/${userId}/toggle-status`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -85,6 +88,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
         setSending(true);
         const tId = toast.loading("Queueing Broadcast...");
         try {
+            // ✅ FIX: Added '/api' prefix
             await axios.post(`${API_URL}/api/admin/broadcast`, broadcast, { headers: { Authorization: `Bearer ${token}` } });
             toast.success("Broadcast Sent! 🚀", { id: tId });
             setBroadcast({ subject: '', message: '' });
@@ -98,7 +102,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
     const copyToClipboard = (email) => {
         navigator.clipboard.writeText(email);
         setCopiedEmail(email);
-        toast.success("Email copied!", { style: { borderRadius: '10px', background: '#333', color: '#fff' } });
+        toast.success("Email copied!");
         setTimeout(() => setCopiedEmail(null), 2000);
     };
 
@@ -107,192 +111,181 @@ export default function AdminDashboard({ token, isDarkMode }) {
     );
 
     if (loading) return (
-        <div className="space-y-6 p-6 min-h-screen">
-            <div className="h-10 w-64 bg-slate-300/20 rounded-xl animate-pulse"></div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1,2,3,4].map(i => <div key={i} className="h-36 rounded-2xl bg-slate-300/10 animate-pulse"></div>)}
+        <div className="space-y-6 animate-pulse p-4">
+            <div className="h-8 w-48 bg-slate-300/20 rounded-lg"></div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1,2,3,4].map(i => <div key={i} className="h-32 rounded-3xl bg-slate-300/10"></div>)}
             </div>
             <div className="grid lg:grid-cols-3 gap-8">
-                <div className="h-80 rounded-2xl bg-slate-300/10 lg:col-span-1 animate-pulse"></div>
-                <div className="h-80 rounded-2xl bg-slate-300/10 lg:col-span-2 animate-pulse"></div>
+                <div className="h-64 rounded-3xl bg-slate-300/10 lg:col-span-1"></div>
+                <div className="h-64 rounded-3xl bg-slate-300/10 lg:col-span-2"></div>
             </div>
         </div>
     );
 
-    // --- PREMIUM THEME VARIABLES ---
-    const pageBg = isDarkMode ? 'bg-[#0B1120]' : 'bg-slate-50/50';
-    const cardBg = isDarkMode ? 'bg-[#1e293b]/80 backdrop-blur-xl border-white/5 shadow-2xl shadow-black/50' : 'bg-white border-slate-200 shadow-xl shadow-slate-200/50';
-    const textMain = isDarkMode ? 'text-white' : 'text-slate-900';
+    // --- THEME VARIABLES ---
+    const cardBg = isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm shadow-slate-200';
+    const textMain = isDarkMode ? 'text-slate-100' : 'text-slate-900';
     const textMuted = isDarkMode ? 'text-slate-400' : 'text-slate-500';
 
     return (
-        <div className={`min-h-screen w-full font-sans relative overflow-hidden ${pageBg} pb-24 md:pb-20`}>
+        <div className={`min-h-screen w-full font-sans bg-transparent ${textMain} pb-24 md:pb-20`}>
             
-            {/* Ambient Background Glow (Premium feel) */}
-            <div className={`absolute top-0 left-1/4 w-96 h-96 rounded-full mix-blend-multiply filter blur-[128px] opacity-30 pointer-events-none ${isDarkMode ? 'bg-indigo-600' : 'bg-indigo-300'}`}></div>
-            <div className={`absolute top-40 right-1/4 w-96 h-96 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 pointer-events-none ${isDarkMode ? 'bg-purple-600' : 'bg-purple-300'}`}></div>
-            
-            <div className="relative z-10 max-w-7xl mx-auto pt-6 px-4 sm:px-6">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 px-4 sm:px-0">
+                <div>
+                    <h1 className={`text-2xl md:text-3xl font-black tracking-tight mb-1 ${textMain}`}>
+                        Admin <span className="text-indigo-500">Hub</span>
+                    </h1>
+                    <p className={`text-xs md:text-sm ${textMuted}`}>Overview of system performance.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                     <button onClick={fetchAdminData} className={`p-2.5 rounded-full border transition-all active:scale-95 active:rotate-180 duration-500 ${isDarkMode ? 'bg-slate-900 border-slate-700 hover:bg-slate-800' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                        <RefreshIcon />
+                    </button>
+                    <div className={`px-4 py-2 rounded-full text-xs font-bold border flex items-center gap-2 ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}>
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        System Online
+                    </div>
+                </div>
+            </div>
+
+            {/* 1. Stats Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-4 sm:px-0 mb-8">
+                <ModernStatCard label="Total Users" value={stats.total_users} icon={<UserIcon />} color="bg-indigo-500" isDarkMode={isDarkMode} delay="0" />
+                <ModernStatCard label="Total Alerts" value={stats.total_alerts} icon={<DashboardIcon />} color="bg-purple-500" isDarkMode={isDarkMode} delay="100" />
+                <ModernStatCard label="Active" value={stats.active_alerts} icon={<div className="w-2 h-2 rounded-full bg-white"/>} color="bg-emerald-500" isDarkMode={isDarkMode} delay="200" />
+                <ModernStatCard label="Triggered" value={stats.triggered_alerts} icon={<div className="text-xs">⚠️</div>} color="bg-orange-500" isDarkMode={isDarkMode} delay="300" />
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8 px-4 sm:px-0">
                 
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-                    <div>
-                        <h1 className={`text-3xl md:text-4xl font-extrabold tracking-tight mb-2 ${textMain}`}>
-                            Admin <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">Command Center</span>
-                        </h1>
-                        <p className={`text-sm ${textMuted} font-medium tracking-wide`}>Monitor performance, manage users, and broadcast updates.</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className={`px-4 py-2.5 rounded-xl text-xs font-bold border flex items-center gap-2.5 shadow-sm backdrop-blur-md ${isDarkMode ? 'bg-slate-800/50 border-white/10 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
-                            <span className="relative flex h-2.5 w-2.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                            </span>
-                            SYSTEM OPTIMAL
+                {/* 2. Broadcast Section */}
+                <div className={`lg:col-span-1 p-6 rounded-3xl border flex flex-col relative overflow-hidden transition-all ${cardBg}`}>
+                    <div className="flex items-center gap-3 mb-6 relative z-10">
+                        <div className="p-2.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400">
+                            <MegaphoneIcon />
                         </div>
-                         <button onClick={fetchAdminData} className={`p-2.5 rounded-xl border transition-all active:scale-95 active:rotate-180 duration-500 shadow-sm ${isDarkMode ? 'bg-slate-800/50 border-white/10 hover:bg-slate-700 text-slate-300' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}>
-                            <RefreshIcon />
+                        <div>
+                            <h2 className={`font-bold text-lg ${textMain}`}>Announcement</h2>
+                            <p className="text-xs opacity-50">Notify {stats.total_users} users</p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleBroadcast} className="space-y-4 flex-1 flex flex-col relative z-10">
+                        <div className="group">
+                            <input 
+                                type="text" 
+                                placeholder="Subject"
+                                className={`w-full px-4 py-3 rounded-xl border outline-none text-sm transition-all focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-950 border-slate-700 focus:border-indigo-500 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 focus:border-indigo-500 text-slate-900 placeholder:text-slate-400'}`}
+                                value={broadcast.subject}
+                                onChange={e => setBroadcast({...broadcast, subject: e.target.value})}
+                            />
+                        </div>
+                        <div className="flex-1 group">
+                            <textarea 
+                                rows="3"
+                                placeholder="Type your message..."
+                                className={`w-full h-full min-h-[120px] px-4 py-3 rounded-xl border outline-none text-sm transition-all resize-none focus:ring-2 focus:ring-indigo-500/20 ${isDarkMode ? 'bg-slate-950 border-slate-700 focus:border-indigo-500 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 focus:border-indigo-500 text-slate-900 placeholder:text-slate-400'}`}
+                                value={broadcast.message}
+                                onChange={e => setBroadcast({...broadcast, message: e.target.value})}
+                            ></textarea>
+                        </div>
+                        <button 
+                            disabled={sending}
+                            type="submit"
+                            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {sending ? <span className="animate-pulse">Sending...</span> : <><span className="text-sm">Send Broadcast</span><SendIcon /></>}
                         </button>
-                    </div>
+                    </form>
                 </div>
 
-                {/* 1. Stats Cards (Premium Glassmorphism) */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
-                    <PremiumStatCard label="Total Users" value={stats.total_users} icon={<UserIcon />} gradient="from-blue-500 to-indigo-600" isDarkMode={isDarkMode} delay="0" />
-                    <PremiumStatCard label="Total Alerts" value={stats.total_alerts} icon={<DashboardIcon />} gradient="from-purple-500 to-fuchsia-600" isDarkMode={isDarkMode} delay="100" />
-                    <PremiumStatCard label="Active Alerts" value={stats.active_alerts} icon={<div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"/>} gradient="from-emerald-500 to-teal-600" isDarkMode={isDarkMode} delay="200" />
-                    <PremiumStatCard label="Triggered" value={stats.triggered_alerts} icon={<div className="text-sm">⚠️</div>} gradient="from-orange-500 to-red-500" isDarkMode={isDarkMode} delay="300" />
-                </div>
-
-                <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
+                {/* 3. Users List */}
+                <div className={`lg:col-span-2 rounded-3xl border overflow-hidden flex flex-col h-full ${cardBg}`}>
                     
-                    {/* 2. Broadcast Section */}
-                    <div className={`lg:col-span-1 p-6 md:p-8 rounded-2xl border flex flex-col relative transition-all duration-300 hover:shadow-2xl ${cardBg}`}>
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/30">
-                                <MegaphoneIcon />
-                            </div>
-                            <div>
-                                <h2 className={`font-bold text-xl tracking-tight ${textMain}`}>Broadcast</h2>
-                                <p className={`text-xs mt-0.5 ${textMuted}`}>Reach {stats.total_users} users instantly</p>
-                            </div>
+                    {/* Toolbar */}
+                    <div className={`p-4 md:p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                        <div>
+                            <h2 className={`font-bold text-lg ${textMain}`}>User Database</h2>
+                            <p className="text-xs opacity-50">{users.length} registered accounts</p>
                         </div>
-
-                        <form onSubmit={handleBroadcast} className="space-y-5 flex-1 flex flex-col">
-                            <div>
-                                <label className={`block text-xs font-bold mb-2 ml-1 ${textMuted}`}>SUBJECT LINE</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="e.g. Important System Update"
-                                    className={`w-full px-4 py-3.5 rounded-xl border outline-none text-sm transition-all focus:ring-4 focus:ring-indigo-500/10 ${isDarkMode ? 'bg-slate-900/50 border-white/10 focus:border-indigo-500 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-200 focus:border-indigo-500 text-slate-900 placeholder:text-slate-400'}`}
-                                    value={broadcast.subject}
-                                    onChange={e => setBroadcast({...broadcast, subject: e.target.value})}
-                                />
-                            </div>
-                            <div className="flex-1 flex flex-col">
-                                <label className={`block text-xs font-bold mb-2 ml-1 ${textMuted}`}>MESSAGE BODY</label>
-                                <textarea 
-                                    placeholder="Write your announcement here..."
-                                    className={`w-full flex-1 min-h-[160px] px-4 py-3.5 rounded-xl border outline-none text-sm transition-all resize-none focus:ring-4 focus:ring-indigo-500/10 ${isDarkMode ? 'bg-slate-900/50 border-white/10 focus:border-indigo-500 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-200 focus:border-indigo-500 text-slate-900 placeholder:text-slate-400'}`}
-                                    value={broadcast.message}
-                                    onChange={e => setBroadcast({...broadcast, message: e.target.value})}
-                                ></textarea>
-                            </div>
-                            <button 
-                                disabled={sending}
-                                type="submit"
-                                className="w-full py-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25"
-                            >
-                                {sending ? <span className="animate-pulse flex items-center gap-2">Transmitting...</span> : <><span className="tracking-wide">Deploy Message</span><SendIcon /></>}
-                            </button>
-                        </form>
+                        {/* 🔍 Search Bar */}
+                        <div className={`relative flex items-center gap-2 px-3 py-2 rounded-xl border w-full sm:w-64 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 ${isDarkMode ? 'bg-slate-950 border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                            <div className="opacity-50"><SearchIcon /></div>
+                            <input 
+                                type="text" 
+                                placeholder="Search email..." 
+                                className={`bg-transparent outline-none text-sm w-full ${textMain} placeholder:text-opacity-50`}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="p-1 rounded-full hover:bg-slate-500/20 transition-colors opacity-50 hover:opacity-100">
+                                    <XIcon />
+                                </button>
+                            )}
+                        </div>
                     </div>
-
-                    {/* 3. Users List Section */}
-                    <div className={`lg:col-span-2 rounded-2xl border overflow-hidden flex flex-col h-[600px] transition-all duration-300 hover:shadow-2xl ${cardBg}`}>
+                    
+                    {/* Table Container */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[500px] lg:max-h-none p-0">
                         
-                        {/* Toolbar */}
-                        <div className={`p-5 md:p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isDarkMode ? 'border-white/10 bg-slate-800/30' : 'border-slate-100 bg-slate-50/50'}`}>
-                            <div>
-                                <h2 className={`font-bold text-xl tracking-tight ${textMain}`}>User Directory</h2>
-                                <p className={`text-xs mt-0.5 ${textMuted}`}>Manage access and accounts</p>
-                            </div>
-                            {/* Premium Search Bar */}
-                            <div className={`relative flex items-center gap-2 px-4 py-2.5 rounded-full border w-full sm:w-72 transition-all focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500 ${isDarkMode ? 'bg-slate-900/50 border-white/10' : 'bg-white border-slate-200 shadow-sm'}`}>
-                                <div className={`${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}><SearchIcon /></div>
-                                <input 
-                                    type="text" 
-                                    placeholder="Search by email..." 
-                                    className={`bg-transparent outline-none text-sm w-full ${textMain} placeholder:opacity-50`}
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                                {searchTerm && (
-                                    <button onClick={() => setSearchTerm('')} className={`p-1 rounded-full transition-colors ${isDarkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>
-                                        <XIcon />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                        
-                        {/* Table Container */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
-                            
-                            {/* 🖥️ DESKTOP VIEW */}
-                            <table className="w-full text-left border-collapse hidden md:table">
-                                <thead className={`text-[10px] uppercase tracking-widest font-extrabold sticky top-0 z-10 backdrop-blur-xl ${isDarkMode ? 'bg-slate-900/80 text-slate-400 border-b border-white/10' : 'bg-white/90 text-slate-500 border-b border-slate-200'}`}>
-                                    <tr>
-                                        <th className="p-5 pl-8">Account Details</th>
-                                        <th className="p-5">Security Status</th>
-                                        <th className="p-5 text-right pr-8">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
-                                    {filteredUsers.map((user) => (
-                                        <UserRow 
-                                            key={user._id} 
-                                            user={user} 
-                                            isDarkMode={isDarkMode} 
-                                            handleDeleteUser={handleDeleteUser} 
-                                            handleToggleStatus={handleToggleStatus}
-                                            textMain={textMain}
-                                            textMuted={textMuted}
-                                            copyToClipboard={copyToClipboard}
-                                            copiedEmail={copiedEmail}
-                                        />
-                                    ))}
-                                    {filteredUsers.length === 0 && (
-                                        <tr><td colSpan="3" className="p-16 text-center text-slate-500 text-sm">No users found matching "{searchTerm}"</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-
-                            {/* 📱 MOBILE VIEW */}
-                            <div className={`md:hidden flex flex-col divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
+                        {/* 🖥️ DESKTOP VIEW */}
+                        <table className="w-full text-left border-collapse hidden md:table">
+                            <thead className={`text-[10px] uppercase tracking-wider font-bold sticky top-0 z-10 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 text-slate-500' : 'bg-white/90 text-slate-500'}`}>
+                                <tr>
+                                    <th className="p-5 pl-6">User Identity</th>
+                                    <th className="p-5">Status</th>
+                                    <th className="p-5 text-right pr-6">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
                                 {filteredUsers.map((user) => (
-                                    <UserMobileCard 
+                                    <UserRow 
                                         key={user._id} 
                                         user={user} 
                                         isDarkMode={isDarkMode} 
                                         handleDeleteUser={handleDeleteUser} 
                                         handleToggleStatus={handleToggleStatus}
                                         textMain={textMain}
-                                        textMuted={textMuted}
                                         copyToClipboard={copyToClipboard}
                                         copiedEmail={copiedEmail}
                                     />
                                 ))}
                                 {filteredUsers.length === 0 && (
-                                    <div className="p-16 text-center text-slate-500 text-sm">No records found.</div>
+                                    <tr><td colSpan="3" className="p-12 text-center opacity-50 text-sm italic">No users matching "{searchTerm}" found.</td></tr>
                                 )}
-                            </div>
+                            </tbody>
+                        </table>
 
+                        {/* 📱 MOBILE VIEW */}
+                        <div className={`md:hidden flex flex-col divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
+                            {filteredUsers.map((user) => (
+                                <UserMobileCard 
+                                    key={user._id} 
+                                    user={user} 
+                                    isDarkMode={isDarkMode} 
+                                    handleDeleteUser={handleDeleteUser} 
+                                    handleToggleStatus={handleToggleStatus}
+                                    textMain={textMain}
+                                    copyToClipboard={copyToClipboard}
+                                    copiedEmail={copiedEmail}
+                                />
+                            ))}
+                            {filteredUsers.length === 0 && (
+                                <div className="p-12 text-center opacity-50 text-sm italic">No users found.</div>
+                            )}
                         </div>
+
                     </div>
                 </div>
             </div>
             
-            {/* Custom Scrollbar Styles (Sleeker) */}
+            {/* Custom Scrollbar Styles */}
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -305,107 +298,88 @@ export default function AdminDashboard({ token, isDarkMode }) {
 
 // ---------------- SUB COMPONENTS ----------------
 
-const PremiumStatCard = ({ label, value, icon, gradient, isDarkMode, delay }) => (
-    <div className={`relative overflow-hidden p-5 md:p-6 rounded-2xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group ${isDarkMode ? 'bg-[#1e293b]/80 backdrop-blur-xl border-white/5' : 'bg-white border-slate-200'}`} style={{ animationDelay: `${delay}ms` }}>
-        {/* Subtle background gradient glow */}
-        <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full bg-gradient-to-br ${gradient} opacity-20 blur-2xl group-hover:opacity-40 transition-opacity duration-500`}></div>
-        
-        <div className="relative z-10 flex flex-col justify-between h-full gap-4">
-            <div className="flex justify-between items-start">
-                <p className={`text-[11px] md:text-xs font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
-                <div className={`p-2 rounded-xl bg-gradient-to-br ${gradient} text-white shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-300`}>
-                    {React.isValidElement(icon) ? icon : <span className="w-4 h-4 block" />}
-                </div>
-            </div>
-            <p className={`text-3xl md:text-4xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{value}</p>
-        </div>
-    </div>
-);
-
-const UserRow = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus, textMain, textMuted, copyToClipboard, copiedEmail }) => {
+const UserRow = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus, textMain, copyToClipboard, copiedEmail }) => {
     const initial = user.email.charAt(0).toUpperCase();
-    const colors = ['from-rose-500 to-red-600', 'from-orange-400 to-orange-600', 'from-emerald-400 to-emerald-600', 'from-cyan-400 to-cyan-600', 'from-blue-500 to-indigo-600', 'from-violet-500 to-purple-600'];
+    const colors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500'];
     const colorClass = colors[user.email.length % colors.length];
     
+    // Check Active Status
     const isActive = user.is_active !== false;
 
     return (
-        <tr className={`group transition-colors duration-200 ${isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'} ${!isActive ? 'opacity-50 hover:opacity-100 transition-opacity' : ''}`}>
-            <td className="p-4 pl-8">
+        <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'} ${!isActive ? 'opacity-60' : ''}`}>
+            <td className="p-4 pl-6">
                 <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center text-white text-sm font-extrabold shadow-md`}>
+                    <div className={`w-9 h-9 rounded-full ${colorClass} flex items-center justify-center text-white text-xs font-bold shadow-sm`}>
                         {initial}
                     </div>
                     <div>
                         <button 
                             onClick={() => copyToClipboard(user.email)}
-                            className={`font-semibold text-[15px] ${textMain} flex items-center gap-2 hover:text-indigo-500 transition-colors group/email`}
+                            className={`font-bold font-mono text-sm ${textMain} flex items-center gap-2 hover:text-indigo-500 transition-colors group/email`}
+                            title="Click to copy email"
                         >
                             {user.email}
                             <span className={`opacity-0 group-hover/email:opacity-100 transition-opacity text-xs ${copiedEmail === user.email ? 'text-emerald-500' : 'text-slate-400'}`}>
                                 {copiedEmail === user.email ? <CheckIcon /> : <CopyIcon />}
                             </span>
                         </button>
-                        <div className={`text-[11px] uppercase tracking-wider mt-1 ${textMuted} font-mono`}>ID: {user._id.slice(-8)}</div>
+                        <div className="text-[10px] opacity-40 uppercase tracking-widest mt-0.5">ID: {user._id.slice(-6)}</div>
                     </div>
                 </div>
             </td>
             <td className="p-4">
-                <div className="flex flex-col gap-2.5 items-start">
+                <div className="flex flex-col gap-2 items-start">
                     <RoleBadge role={user.role} isDarkMode={isDarkMode} />
                     
                     {user.role !== 'admin' && (
                         <button 
                             onClick={() => handleToggleStatus(user._id, isActive)}
-                            className={`flex items-center gap-2 text-[11px] font-bold px-3 py-1 rounded-full border transition-all ${isActive 
-                                ? `border-emerald-500/20 text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 ${isDarkMode && 'text-emerald-400'}` 
-                                : `border-red-500/20 text-red-600 bg-red-500/10 hover:bg-red-500/20 ${isDarkMode && 'text-red-400'}`}`}
-                            title={isActive ? "Suspend Account" : "Reactivate Account"}
+                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md border w-fit transition-all ${isActive 
+                                ? 'border-emerald-500/20 text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 dark:text-emerald-400' 
+                                : 'border-red-500/20 text-red-600 bg-red-500/10 hover:bg-red-500/20 dark:text-red-400'}`}
+                            title={isActive ? "Suspend User" : "Activate User"}
                         >
-                            {isActive ? (
-                                <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ACTIVE</>
-                            ) : (
-                                <><LockIcon /> SUSPENDED</>
-                            )}
+                            {isActive ? <><UnlockIcon /> ACTIVE</> : <><LockIcon /> BANNED</>}
                         </button>
                     )}
                 </div>
             </td>
-            <td className="p-4 pr-8 text-right">
+            <td className="p-4 pr-6 text-right">
                 <DeleteButton user={user} handleDeleteUser={handleDeleteUser} />
             </td>
         </tr>
     );
 };
 
-const UserMobileCard = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus, textMain, textMuted, copyToClipboard, copiedEmail }) => {
+const UserMobileCard = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus, textMain, copyToClipboard, copiedEmail }) => {
     const initial = user.email.charAt(0).toUpperCase();
-    const colors = ['from-rose-500 to-red-600', 'from-orange-400 to-orange-600', 'from-emerald-400 to-emerald-600', 'from-cyan-400 to-cyan-600', 'from-blue-500 to-indigo-600', 'from-violet-500 to-purple-600'];
+    const colors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500'];
     const colorClass = colors[user.email.length % colors.length];
     const isActive = user.is_active !== false;
 
     return (
-        <div className={`p-5 flex items-center justify-between transition-colors ${isDarkMode ? 'active:bg-slate-800/50' : 'active:bg-slate-50'} ${!isActive ? 'opacity-60' : ''}`}>
-            <div className="flex items-center gap-4 overflow-hidden">
-                <div className={`w-10 h-10 rounded-full flex-shrink-0 bg-gradient-to-br ${colorClass} flex items-center justify-center text-white text-sm font-extrabold shadow-md`}>
+        <div className={`p-4 flex items-center justify-between ${isDarkMode ? 'active:bg-slate-800' : 'active:bg-slate-50'} ${!isActive ? 'opacity-70' : ''}`}>
+            <div className="flex items-center gap-3 overflow-hidden">
+                <div className={`w-9 h-9 rounded-full flex-shrink-0 ${colorClass} flex items-center justify-center text-white text-xs font-bold shadow-sm`}>
                     {initial}
                 </div>
                 <div className="min-w-0">
                      <button 
                         onClick={() => copyToClipboard(user.email)}
-                        className={`font-semibold text-sm truncate ${textMain} flex items-center gap-2 mb-1.5`}
+                        className={`font-bold text-sm truncate ${textMain} flex items-center gap-2`}
                     >
                         {user.email}
                         {copiedEmail === user.email && <span className="text-emerald-500"><CheckIcon /></span>}
                     </button>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 mt-1.5">
                         <RoleBadge role={user.role} isDarkMode={isDarkMode} />
                         {user.role !== 'admin' && (
                              <button 
                                 onClick={() => handleToggleStatus(user._id, isActive)}
-                                className={`flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${isActive ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20 dark:text-emerald-400' : 'text-red-600 border-red-500/20 bg-red-500/10 dark:text-red-400'}`}
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${isActive ? 'text-emerald-600 border-emerald-500/30 dark:text-emerald-400' : 'text-red-600 border-red-500/30 bg-red-500/10 dark:text-red-400'}`}
                             >
-                                {isActive ? <><span className="w-1 h-1 rounded-full bg-emerald-500"></span> ACTIVE</> : "SUSPENDED"}
+                                {isActive ? "ACTIVE" : "BANNED"}
                             </button>
                         )}
                     </div>
@@ -418,11 +392,11 @@ const UserMobileCard = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus
 
 const RoleBadge = ({ role, isDarkMode }) => (
     role === 'admin' ? (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold tracking-wide bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/20">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
             <AdminBadgeIcon /> ADMIN
         </span>
     ) : (
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide border ${isDarkMode ? 'bg-slate-800 border-white/10 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
             USER
         </span>
     )
@@ -432,9 +406,23 @@ const DeleteButton = ({ user, handleDeleteUser, isMobile }) => (
     <button 
         onClick={() => handleDeleteUser(user._id)}
         disabled={user.role === 'admin'}
-        className={`p-2.5 rounded-xl bg-transparent ${user.role === 'admin' ? 'text-slate-300 dark:text-slate-700' : 'text-slate-400 hover:text-white hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/30'} transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed ${isMobile ? 'ml-2' : ''}`}
-        title={user.role === 'admin' ? "Cannot delete admin" : "Delete User"}
+        className={`p-2 rounded-lg bg-transparent text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed ${isMobile ? 'ml-2' : ''}`}
+        title="Delete User"
     >
         <TrashIcon />
     </button>
+);
+
+const ModernStatCard = ({ label, value, icon, color, isDarkMode, delay }) => (
+    <div className={`relative overflow-hidden p-4 md:p-5 rounded-3xl border transition-all duration-300 hover:shadow-lg group ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm shadow-slate-200'}`} style={{ animationDelay: `${delay}ms` }}>
+        <div className="relative z-10 flex flex-col justify-between h-full gap-3">
+            <div className="flex justify-between items-start">
+                <p className={`text-[10px] md:text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{label}</p>
+                <div className={`p-1.5 md:p-2 rounded-xl ${color} text-white shadow-md shadow-indigo-500/20 group-hover:scale-110 transition-transform`}>
+                    {React.isValidElement(icon) ? icon : <span className="w-4 h-4 block" />}
+                </div>
+            </div>
+            <p className={`text-3xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{value}</p>
+        </div>
+    </div>
 );
