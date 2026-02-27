@@ -3,17 +3,18 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { API_URL } from '../../utils/helpers';
 
-// --- ✨ MINIMALIST ICONS ---
-const TerminalIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>;
-const UserIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
-const BellIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
-const ZapIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>;
-const TargetIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
-const SearchIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
-const RefreshIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>;
-const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-const CheckIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
-const CopyIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
+// --- ✨ SLICK ICONS ---
+const MegaphoneIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
+const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
+const UserIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+const BellIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
+const TargetIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
+const ZapIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>;
+const SearchIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
+const RefreshIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>;
+const TrashIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+const CheckIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+const CopyIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 
 export default function AdminDashboard({ token, isDarkMode }) {
     const [stats, setStats] = useState({ total_users: 0, total_alerts: 0, active_alerts: 0, triggered_alerts: 0 });
@@ -36,7 +37,7 @@ export default function AdminDashboard({ token, isDarkMode }) {
             setStats(statsRes.data);
             setUsers(usersRes.data);
         } catch (error) {
-            toast.error("Failed to fetch system data.");
+            toast.error("Failed to sync system data.");
         } finally {
             setLoading(false);
         }
@@ -47,14 +48,14 @@ export default function AdminDashboard({ token, isDarkMode }) {
     }, [token]);
 
     const handleDeleteUser = async (userId) => {
-        if(!window.confirm("CONFIRM DELETION: This action is irreversible.")) return;
-        const tId = toast.loading("Executing deletion...");
+        if(!window.confirm("Delete this user permanently? This cannot be undone.")) return;
+        const tId = toast.loading("Deleting user...");
         try {
             await axios.delete(`${API_URL}/api/admin/user/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
             setUsers(users.filter(u => u._id !== userId));
-            toast.success("Record purged.", { id: tId });
+            toast.success("User deleted successfully.", { id: tId });
         } catch (error) {
-            toast.error("Deletion failed.", { id: tId });
+            toast.error("Failed to delete user.", { id: tId });
         }
     };
 
@@ -65,26 +66,26 @@ export default function AdminDashboard({ token, isDarkMode }) {
             await axios.patch(`${API_URL}/api/admin/user/${userId}/toggle-status`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            toast.success(currentStatus ? "Access Revoked." : "Access Granted.");
+            toast.success(currentStatus ? "User Suspended." : "User Activated.");
         } catch (error) {
             setUsers(users); 
-            toast.error("Command failed.");
+            toast.error("Failed to update status.");
         }
     };
 
     const handleBroadcast = async (e) => {
         e.preventDefault();
-        if(!broadcast.subject || !broadcast.message) return toast.error("Missing parameters.");
-        if(!window.confirm(`Execute broadcast to ${stats.total_users} nodes?`)) return;
+        if(!broadcast.subject || !broadcast.message) return toast.error("Please fill in all fields.");
+        if(!window.confirm(`Send broadcast to ${stats.total_users} users?`)) return;
 
         setSending(true);
-        const tId = toast.loading("Transmitting...");
+        const tId = toast.loading("Sending broadcast...");
         try {
             await axios.post(`${API_URL}/api/admin/broadcast`, broadcast, { headers: { Authorization: `Bearer ${token}` } });
-            toast.success("Transmission complete.", { id: tId });
+            toast.success("Broadcast delivered!", { id: tId });
             setBroadcast({ subject: '', message: '' });
         } catch (error) {
-            toast.error("Transmission failed.", { id: tId });
+            toast.error("Failed to send broadcast.", { id: tId });
         } finally {
             setSending(false);
         }
@@ -98,187 +99,194 @@ export default function AdminDashboard({ token, isDarkMode }) {
 
     const filteredUsers = users.filter(user => user.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    // --- Enterprise Theme Colors ---
-    const bgMain = isDarkMode ? 'bg-[#000000]' : 'bg-[#f4f4f5]';
-    const bgCard = isDarkMode ? 'bg-[#0a0a0a]' : 'bg-white';
-    const borderMuted = isDarkMode ? 'border-[#262626]' : 'border-[#e4e4e7]';
-    const borderHighlight = isDarkMode ? 'border-[#404040]' : 'border-[#d4d4d8]';
-    const textMain = isDarkMode ? 'text-[#f5f5f5]' : 'text-[#171717]';
-    const textMuted = isDarkMode ? 'text-[#a3a3a3]' : 'text-[#737373]';
-    const accentColor = 'emerald-500';
+    // --- GLASSMORPHISM THEME VARIABLES ---
+    // Background is completely transparent. The "Glass" effect adapts to whatever is behind it.
+    const textMain = isDarkMode ? 'text-white' : 'text-slate-900';
+    const textMuted = isDarkMode ? 'text-slate-300' : 'text-slate-500';
+    
+    // Glass Card Styles
+    const glassCard = isDarkMode 
+        ? 'bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl' 
+        : 'bg-white/70 backdrop-blur-xl border border-slate-200/50 shadow-lg shadow-slate-200/50';
+    
+    const glassHeader = isDarkMode 
+        ? 'bg-slate-900/80 border-white/10' 
+        : 'bg-white/80 border-slate-200/50';
+
+    const glassInput = isDarkMode
+        ? 'bg-slate-950/50 border-white/10 text-white placeholder-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20'
+        : 'bg-white/50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20';
 
     if (loading) return (
-        <div className={`min-h-screen w-full flex items-center justify-center font-mono text-sm ${bgMain} ${textMuted}`}>
-            [ INITIALIZING ADMIN WORKSPACE... ]
+        <div className={`min-h-[80vh] w-full flex items-center justify-center bg-transparent ${textMain}`}>
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="font-medium tracking-wide">Loading Admin Dashboard...</p>
+            </div>
         </div>
     );
 
     return (
-        <div className={`min-h-screen w-full font-sans ${bgMain} ${textMain} p-4 md:p-8 pb-24 md:pb-12`}>
-            <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        <div className={`min-h-screen w-full font-sans bg-transparent ${textMain} p-4 md:p-6 lg:p-8`}>
+            {/* Desktop Wrapper (Constrains width for ultra-wide monitors) */}
+            <div className="max-w-[1400px] mx-auto space-y-6">
                 
-                {/* 1. TOP HEADER - COMMAND CENTER */}
-                <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                {/* 1. HEADER */}
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                            <span className={`text-[10px] font-mono tracking-widest uppercase ${textMuted}`}>System Status: Optimal</span>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            </span>
+                            <span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>System Online</span>
                         </div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Admin Console</h1>
+                        <h1 className="text-3xl font-extrabold tracking-tight">Command Center</h1>
                     </div>
+                    
                     <button 
                         onClick={fetchAdminData} 
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-mono uppercase tracking-wider border ${borderMuted} ${bgCard} hover:${borderHighlight} transition-all`}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all active:scale-95 ${glassCard} hover:bg-opacity-100`}
                     >
-                        <RefreshIcon /> Sync Data
+                        <RefreshIcon /> Refresh Data
                     </button>
-                </header>
-
-                {/* 2. STATS STRIP (1-Pixel Grid) */}
-                <div className={`grid grid-cols-2 lg:grid-cols-4 gap-[1px] border ${borderMuted} rounded-lg overflow-hidden ${isDarkMode ? 'bg-[#262626]' : 'bg-[#e4e4e7]'}`}>
-                    <StatBlock title="TOTAL USERS" value={stats.total_users} icon={<UserIcon />} bgCard={bgCard} textMain={textMain} textMuted={textMuted} />
-                    <StatBlock title="ALERTS SET" value={stats.total_alerts} icon={<BellIcon />} bgCard={bgCard} textMain={textMain} textMuted={textMuted} />
-                    <StatBlock title="ACTIVE TRACKERS" value={stats.active_alerts} icon={<TargetIcon />} bgCard={bgCard} textMain={textMain} textMuted={textMuted} highlight />
-                    <StatBlock title="TARGETS HIT" value={stats.triggered_alerts} icon={<ZapIcon />} bgCard={bgCard} textMain={textMain} textMuted={textMuted} />
                 </div>
 
-                {/* 3. MAIN SPLIT LAYOUT */}
-                <div className="grid lg:grid-cols-12 gap-6 items-start">
+                {/* 2. STATS GRID (Glass Cards) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    <StatCard title="Total Users" value={stats.total_users} icon={<UserIcon />} color="text-indigo-500" bgIcon="bg-indigo-500/10" glassCard={glassCard} textMain={textMain} textMuted={textMuted} />
+                    <StatCard title="Total Alerts" value={stats.total_alerts} icon={<BellIcon />} color="text-purple-500" bgIcon="bg-purple-500/10" glassCard={glassCard} textMain={textMain} textMuted={textMuted} />
+                    <StatCard title="Active Triggers" value={stats.active_alerts} icon={<TargetIcon />} color="text-emerald-500" bgIcon="bg-emerald-500/10" glassCard={glassCard} textMain={textMain} textMuted={textMuted} />
+                    <StatCard title="Alerts Fired" value={stats.triggered_alerts} icon={<ZapIcon />} color="text-orange-500" bgIcon="bg-orange-500/10" glassCard={glassCard} textMain={textMain} textMuted={textMuted} />
+                </div>
+
+                {/* 3. MAIN DASHBOARD SPLIT */}
+                <div className="grid lg:grid-cols-12 gap-6 items-start pb-20">
                     
-                    {/* LEFT PANEL: SYSTEM BROADCAST */}
-                    <div className={`lg:col-span-4 flex flex-col border ${borderMuted} rounded-lg overflow-hidden ${bgCard}`}>
-                        <div className={`p-4 border-b ${borderMuted} flex items-center gap-2`}>
-                            <TerminalIcon />
-                            <h2 className="text-sm font-semibold uppercase tracking-wider">Execute Broadcast</h2>
+                    {/* LEFT: BROADCAST WIDGET (3/12 width on Desktop) */}
+                    <div className={`lg:col-span-4 rounded-2xl flex flex-col overflow-hidden transition-all ${glassCard}`}>
+                        <div className={`p-5 border-b flex items-center gap-3 backdrop-blur-md ${glassHeader}`}>
+                            <div className="p-2.5 rounded-lg bg-indigo-500 text-white shadow-md shadow-indigo-500/20">
+                                <MegaphoneIcon />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold">System Broadcast</h2>
+                                <p className={`text-[11px] font-medium uppercase tracking-wider ${textMuted}`}>To {stats.total_users} Users</p>
+                            </div>
                         </div>
                         
-                        <form onSubmit={handleBroadcast} className="flex flex-col p-4 gap-4">
-                            <div className="flex flex-col gap-1.5">
-                                <label className={`text-[10px] font-mono uppercase tracking-widest ${textMuted}`}>Subject / Header</label>
+                        <form onSubmit={handleBroadcast} className="flex flex-col p-5 gap-5">
+                            <div>
+                                <label className={`block text-xs font-bold mb-2 uppercase tracking-wide ${textMuted}`}>Subject Line</label>
                                 <input 
                                     type="text" 
-                                    className={`w-full px-3 py-2 text-sm bg-transparent border ${borderMuted} rounded focus:border-emerald-500 outline-none transition-colors font-medium`}
+                                    className={`w-full px-4 py-3 rounded-xl border outline-none text-sm transition-all focus:ring-4 ${glassInput}`}
                                     value={broadcast.subject}
                                     onChange={e => setBroadcast({...broadcast, subject: e.target.value})}
-                                    placeholder="Enter subject line..."
+                                    placeholder="Announcement Title"
                                 />
                             </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className={`text-[10px] font-mono uppercase tracking-widest ${textMuted}`}>Payload / Message</label>
+                            <div className="flex-1">
+                                <label className={`block text-xs font-bold mb-2 uppercase tracking-wide ${textMuted}`}>Message Content</label>
                                 <textarea 
-                                    className={`w-full h-32 px-3 py-2 text-sm bg-transparent border ${borderMuted} rounded focus:border-emerald-500 outline-none transition-colors resize-none`}
+                                    className={`w-full h-36 px-4 py-3 rounded-xl border outline-none text-sm transition-all resize-none focus:ring-4 ${glassInput}`}
                                     value={broadcast.message}
                                     onChange={e => setBroadcast({...broadcast, message: e.target.value})}
-                                    placeholder="Enter transmission payload..."
+                                    placeholder="Type your message here..."
                                 ></textarea>
                             </div>
-                            
                             <button 
                                 disabled={sending} type="submit"
-                                className="mt-2 w-full py-2.5 text-xs font-mono uppercase tracking-widest font-bold bg-white text-black hover:bg-gray-200 dark:bg-white dark:text-black transition-colors rounded disabled:opacity-50"
+                                className="w-full py-3.5 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all active:scale-95 flex justify-center items-center gap-2 shadow-lg shadow-indigo-500/25 disabled:opacity-50"
                             >
-                                {sending ? "[ TRANSMITTING... ]" : "[ DEPLOY MESSAGE ]"}
+                                {sending ? <span className="animate-pulse">Sending...</span> : <>Deploy Message <SendIcon /></>}
                             </button>
                         </form>
                     </div>
 
-                    {/* RIGHT PANEL: USER REGISTRY */}
-                    <div className={`lg:col-span-8 flex flex-col border ${borderMuted} rounded-lg overflow-hidden ${bgCard} h-[600px]`}>
+                    {/* RIGHT: USER DIRECTORY (9/12 width on Desktop) */}
+                    <div className={`lg:col-span-8 rounded-2xl flex flex-col overflow-hidden h-[600px] transition-all ${glassCard}`}>
                         
-                        {/* Table Header / Search */}
-                        <div className={`p-4 border-b ${borderMuted} flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
-                            <h2 className="text-sm font-semibold uppercase tracking-wider flex items-center gap-2">
-                                User Registry <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${isDarkMode ? 'bg-[#262626]' : 'bg-gray-100'}`}>{users.length} Nodes</span>
-                            </h2>
+                        {/* Toolbar */}
+                        <div className={`p-4 md:px-6 md:py-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-md z-20 ${glassHeader}`}>
+                            <div>
+                                <h2 className="text-lg font-bold flex items-center gap-2">
+                                    User Directory
+                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${isDarkMode ? 'bg-white/10' : 'bg-slate-900/10'}`}>
+                                        {users.length}
+                                    </span>
+                                </h2>
+                            </div>
                             
-                            <div className={`flex items-center gap-2 px-3 py-1.5 border ${borderMuted} rounded-md focus-within:border-emerald-500 transition-colors w-full sm:w-64`}>
-                                <span className={textMuted}><SearchIcon /></span>
+                            {/* Search */}
+                            <div className={`relative flex items-center gap-2 px-3 py-2.5 rounded-xl border w-full sm:w-72 transition-all focus-within:ring-4 ${glassInput}`}>
+                                <SearchIcon className="opacity-50" />
                                 <input 
                                     type="text" 
-                                    className="bg-transparent outline-none text-xs w-full font-mono"
-                                    placeholder="Query email..."
+                                    className="bg-transparent outline-none text-sm w-full placeholder-inherit"
+                                    placeholder="Search by email..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        {/* Ultra Minimal List */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            <div className="flex flex-col w-full">
-                                {/* Desktop Table Headers */}
-                                <div className={`hidden md:grid grid-cols-12 gap-4 px-4 py-3 border-b ${borderMuted} text-[10px] font-mono uppercase tracking-widest ${textMuted} sticky top-0 ${bgCard} z-10`}>
-                                    <div className="col-span-5">Identity</div>
-                                    <div className="col-span-3">Unique ID</div>
-                                    <div className="col-span-2">Status</div>
-                                    <div className="col-span-2 text-right">Execute</div>
-                                </div>
+                        {/* List / Table Area */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
+                            
+                            {/* 🖥️ DESKTOP: Proper HTML Table for perfect alignment */}
+                            <table className="w-full text-left border-collapse hidden md:table">
+                                <thead className={`sticky top-0 z-20 backdrop-blur-xl border-b text-xs font-bold uppercase tracking-wider ${textMuted} ${glassHeader}`}>
+                                    <tr>
+                                        <th className="py-4 px-6">User Account</th>
+                                        <th className="py-4 px-6">Role</th>
+                                        <th className="py-4 px-6">Status</th>
+                                        <th className="py-4 px-6 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-200/50'}`}>
+                                    {filteredUsers.length === 0 ? (
+                                        <tr><td colSpan="4" className={`py-16 text-center text-sm ${textMuted}`}>No users found.</td></tr>
+                                    ) : (
+                                        filteredUsers.map((user) => (
+                                            <DesktopUserRow 
+                                                key={user._id} user={user} isDarkMode={isDarkMode} 
+                                                handleDeleteUser={handleDeleteUser} handleToggleStatus={handleToggleStatus}
+                                                copyToClipboard={copyToClipboard} copiedEmail={copiedEmail}
+                                                textMain={textMain} textMuted={textMuted}
+                                            />
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
 
-                                {/* Rows */}
+                            {/* 📱 MOBILE: Card View */}
+                            <div className={`md:hidden flex flex-col divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-200/50'}`}>
                                 {filteredUsers.length === 0 ? (
-                                    <div className={`p-8 text-center text-xs font-mono uppercase ${textMuted}`}>No records match query.</div>
+                                    <div className={`py-16 text-center text-sm ${textMuted}`}>No users found.</div>
                                 ) : (
                                     filteredUsers.map((user) => (
-                                        <div key={user._id} className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-4 py-3 border-b ${borderMuted} items-center transition-colors hover:${isDarkMode ? 'bg-[#171717]' : 'bg-gray-50'}`}>
-                                            
-                                            {/* Email / Role */}
-                                            <div className="col-span-5 flex items-center gap-3 overflow-hidden">
-                                                <div className={`shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${user.role === 'admin' ? 'bg-purple-500 text-white' : (isDarkMode ? 'bg-[#262626]' : 'bg-gray-200')}`}>
-                                                    {user.email.charAt(0).toUpperCase()}
-                                                </div>
-                                                <button 
-                                                    onClick={() => copyToClipboard(user.email)}
-                                                    className={`text-sm font-medium truncate flex items-center gap-2 hover:text-emerald-500 transition-colors`}
-                                                >
-                                                    {user.email}
-                                                    {copiedEmail === user.email && <span className="text-emerald-500"><CheckIcon /></span>}
-                                                </button>
-                                            </div>
-
-                                            {/* ID (Monospace) */}
-                                            <div className={`col-span-3 text-xs font-mono hidden md:block ${textMuted}`}>
-                                                {user._id}
-                                            </div>
-
-                                            {/* Status Badge */}
-                                            <div className="col-span-2 flex items-center gap-2">
-                                                {user.role === 'admin' ? (
-                                                    <span className="text-[10px] uppercase font-mono tracking-widest text-purple-500">ADMIN</span>
-                                                ) : (
-                                                    <button 
-                                                        onClick={() => handleToggleStatus(user._id, user.is_active !== false)}
-                                                        className={`flex items-center gap-1.5 text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded border transition-colors ${user.is_active !== false ? `border-emerald-500/30 text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20` : `border-red-500/30 text-red-500 bg-red-500/10 hover:bg-red-500/20`}`}
-                                                    >
-                                                        {user.is_active !== false ? 'ACTIVE' : 'BANNED'}
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="col-span-2 flex justify-end">
-                                                <button 
-                                                    onClick={() => handleDeleteUser(user._id)}
-                                                    disabled={user.role === 'admin'}
-                                                    className={`p-1.5 rounded transition-colors ${user.role === 'admin' ? 'opacity-20 cursor-not-allowed' : 'hover:bg-red-500/10 hover:text-red-500 text-gray-400'}`}
-                                                >
-                                                    <TrashIcon />
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <MobileUserCard 
+                                            key={user._id} user={user} isDarkMode={isDarkMode} 
+                                            handleDeleteUser={handleDeleteUser} handleToggleStatus={handleToggleStatus}
+                                            copyToClipboard={copyToClipboard} copiedEmail={copiedEmail}
+                                            textMain={textMain} textMuted={textMuted}
+                                        />
                                     ))
                                 )}
                             </div>
+
                         </div>
                     </div>
-
                 </div>
             </div>
 
+            {/* Custom Scrollbar to match glass effect */}
             <style>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? '#262626' : '#d4d4d8'}; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: ${isDarkMode ? '#404040' : '#a3a3a3'}; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)'}; border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: ${isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)'}; }
             `}</style>
         </div>
     );
@@ -286,18 +294,139 @@ export default function AdminDashboard({ token, isDarkMode }) {
 
 // ---------------- SUB COMPONENTS ----------------
 
-const StatBlock = ({ title, value, icon, bgCard, textMain, textMuted, highlight }) => (
-    <div className={`p-4 sm:p-5 flex flex-col justify-between h-28 relative ${bgCard}`}>
+const StatCard = ({ title, value, icon, color, bgIcon, glassCard, textMain, textMuted }) => (
+    <div className={`p-5 md:p-6 rounded-2xl flex flex-col justify-between h-32 md:h-36 transition-all hover:-translate-y-1 ${glassCard}`}>
         <div className="flex items-center justify-between">
-            <span className={`text-[10px] font-mono tracking-widest uppercase ${highlight ? 'text-emerald-500' : textMuted}`}>
+            <span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>
                 {title}
             </span>
-            <span className={highlight ? 'text-emerald-500' : textMuted}>
+            <div className={`p-2 rounded-xl ${bgIcon} ${color}`}>
                 {icon}
-            </span>
+            </div>
         </div>
-        <span className={`text-3xl tracking-tight font-semibold ${highlight ? 'text-emerald-500' : textMain}`}>
+        <span className={`text-3xl md:text-4xl font-extrabold tracking-tight ${textMain}`}>
             {value}
         </span>
     </div>
 );
+
+// --- DESKTOP TABLE ROW ---
+const DesktopUserRow = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus, copyToClipboard, copiedEmail, textMain, textMuted }) => {
+    const isActive = user.is_active !== false;
+    const initial = user.email.charAt(0).toUpperCase();
+    
+    // Dynamic initials color
+    const colors = ['bg-rose-500', 'bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-orange-500'];
+    const colorClass = colors[user.email.length % colors.length];
+
+    return (
+        <tr className={`group transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-900/5'} ${!isActive ? 'opacity-50' : ''}`}>
+            <td className="py-4 px-6">
+                <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-md shrink-0 ${colorClass}`}>
+                        {initial}
+                    </div>
+                    <div>
+                        <button 
+                            onClick={() => copyToClipboard(user.email)}
+                            className={`font-semibold text-[15px] ${textMain} hover:text-indigo-500 transition-colors flex items-center gap-2`}
+                        >
+                            {user.email}
+                            {copiedEmail === user.email && <span className="text-emerald-500"><CheckIcon /></span>}
+                        </button>
+                        <div className={`text-[11px] font-mono tracking-wider mt-0.5 ${textMuted}`}>ID: {user._id.slice(-8)}</div>
+                    </div>
+                </div>
+            </td>
+            <td className="py-4 px-6">
+                {user.role === 'admin' ? (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase bg-purple-500/20 text-purple-500 border border-purple-500/20">
+                        Admin
+                    </span>
+                ) : (
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase border ${isDarkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-slate-900/5 border-slate-200 text-slate-600'}`}>
+                        User
+                    </span>
+                )}
+            </td>
+            <td className="py-4 px-6">
+                {user.role !== 'admin' ? (
+                    <button 
+                        onClick={() => handleToggleStatus(user._id, isActive)}
+                        className={`flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${isActive 
+                            ? (isDarkMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100')
+                            : (isDarkMode ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20' : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100')}`}
+                    >
+                        {isActive ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> : null}
+                        {isActive ? "Active" : "Suspended"}
+                    </button>
+                ) : (
+                    <span className={`text-xs font-medium italic ${textMuted}`}>Always Active</span>
+                )}
+            </td>
+            <td className="py-4 px-6 text-right">
+                <button 
+                    onClick={() => handleDeleteUser(user._id)}
+                    disabled={user.role === 'admin'}
+                    className={`p-2 rounded-xl transition-all ${user.role === 'admin' ? 'opacity-20 cursor-not-allowed' : 'hover:bg-red-500 hover:text-white hover:shadow-lg shadow-red-500/30 text-slate-400'}`}
+                >
+                    <TrashIcon />
+                </button>
+            </td>
+        </tr>
+    );
+};
+
+// --- MOBILE LIST CARD ---
+const MobileUserCard = ({ user, isDarkMode, handleDeleteUser, handleToggleStatus, copyToClipboard, copiedEmail, textMain, textMuted }) => {
+    const isActive = user.is_active !== false;
+    const initial = user.email.charAt(0).toUpperCase();
+    const colors = ['bg-rose-500', 'bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-orange-500'];
+    const colorClass = colors[user.email.length % colors.length];
+
+    return (
+        <div className={`p-4 flex flex-col gap-3 transition-colors ${isDarkMode ? 'active:bg-white/5' : 'active:bg-slate-900/5'} ${!isActive ? 'opacity-60' : ''}`}>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 overflow-hidden">
+                    <div className={`w-9 h-9 rounded-full flex shrink-0 items-center justify-center text-white text-sm font-bold shadow-md ${colorClass}`}>
+                        {initial}
+                    </div>
+                    <div className="min-w-0">
+                        <button 
+                            onClick={() => copyToClipboard(user.email)}
+                            className={`font-semibold text-sm truncate ${textMain} flex items-center gap-1.5`}
+                        >
+                            {user.email}
+                            {copiedEmail === user.email && <span className="text-emerald-500"><CheckIcon /></span>}
+                        </button>
+                        <span className={`text-[10px] font-mono tracking-wider block mt-0.5 ${textMuted}`}>{user._id}</span>
+                    </div>
+                </div>
+                <button 
+                    onClick={() => handleDeleteUser(user._id)}
+                    disabled={user.role === 'admin'}
+                    className={`p-2 rounded-lg ${user.role !== 'admin' && 'text-slate-400 hover:text-red-500'} disabled:opacity-20`}
+                >
+                    <TrashIcon />
+                </button>
+            </div>
+            
+            <div className="flex items-center gap-2 pl-12">
+                {user.role === 'admin' ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-500/20 text-purple-500">Admin</span>
+                ) : (
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${isDarkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-slate-900/5 border-slate-200 text-slate-600'}`}>User</span>
+                )}
+                
+                {user.role !== 'admin' && (
+                    <button 
+                        onClick={() => handleToggleStatus(user._id, isActive)}
+                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${isActive ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 dark:text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'}`}
+                    >
+                        {isActive ? "ACTIVE" : "SUSPENDED"}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
