@@ -8,6 +8,10 @@ class Alert(Document):
     target_price: float
     email: str
     
+    # ✅ NAYA FIELD: Alert Direction (UP ya DOWN)
+    # Ye batayega ki alert price badhne par trigger karna hai ya girne par
+    direction: str = "UP" 
+
     # ✅ NEW FIELD: Telegram ID
     # Isko store karne se Background worker fast kaam karega
     telegram_id: Optional[str] = None 
