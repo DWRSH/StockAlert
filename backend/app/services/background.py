@@ -12,7 +12,7 @@ logger = logging.getLogger("StockWatcher")
 
 async def track_stock_prices():
     """
-    Background task to monitor active stock alerts and trigger notifications.
+    Background task to monitor active stock alerts and trigger notifications for BOTH UP and DOWN trends.
     """
     try:
         # 1. Fetch all active alerts
@@ -24,7 +24,6 @@ async def track_stock_prices():
         # 2. Group by symbol
         symbol_map = {}
         for alert in active_alerts:
-            # ✅ FIX: Database field name is 'stock_symbol'
             sym = alert.stock_symbol 
             if sym not in symbol_map:
                 symbol_map[sym] = []
@@ -39,12 +38,23 @@ async def track_stock_prices():
                     continue
 
                 for alert in alerts:
-                    # ✅ FIX: Database field name is 'target_price'
                     target = float(alert.target_price)
+                    # ✅ Default direction to UP if old alerts don't have it
+                    direction = getattr(alert, 'direction', 'UP') 
                     
-                    if current_price >= target:
-                        logger.info(f"🔥 Target Hit: {symbol} at {current_price}")
+                    # ✅ FIX: Handle both UP and DOWN logic
+                    is_triggered = False
+                    
+                    if direction == "UP" and current_price >= target:
+                        is_triggered = True
+                        logger.info(f"🚀 UP Target Hit: {symbol} reached {current_price}")
+                        
+                    elif direction == "DOWN" and current_price <= target:
+                        is_triggered = True
+                        logger.info(f"📉 DOWN Target Hit: {symbol} dropped to {current_price}")
 
+                    # If either condition is met, send alerts
+                    if is_triggered:
                         tasks = []
                         
                         # --- Email Task ---
