@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>StockWatcher | Intelligent Stock Tracking & Portfolio Platform</title>
+    <meta name="description" content="A comprehensive financial platform offering live NSE/BSE tracking, advanced portfolio management, RAG-powered AI assistance, and instant Telegram alerts.">
+    <meta name="keywords" content="Live stock tracking, Portfolio management app, AI financial assistant, Telegram stock alerts, NSE BSE live price, Secure trading platform, Market news integration, NASDAQ tracker, Production backend">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
+                    colors: {
+                        brand: '#6d28d9',      // Violet 700
+                        brandLight: '#ede9fe', // Violet 100
+                        success: '#10b981',    // Emerald 500
+                        surface: '#f8fafc',    // Slate 50
+                        ink: '#0f172a',        // Slate 900
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f4f4f5; color: #0f172a; overflow-x: hidden; }
+        
+        /* Dense Dot Pattern Background */
+        .bg-dots {
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Bento Box Styling */
+        .bento-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        .bento-card:hover {
+            box-shadow: 0 20px 40px -5px rgba(109, 40, 217, 0.08);
+            border-color: #c4b5fd;
+            transform: translateY(-4px);
+        }
+
+        /* Seamless Marquee */
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .ticker-wrapper { display: flex; width: max-content; animation: marquee 40s linear infinite; }
+        .ticker-wrapper:hover { animation-play-state: paused; }
+
+        /* Custom Scrollbar for dense look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="antialiased selection:bg-brand/20 bg-dots">
+
+    <div class="w-full bg-ink text-slate-300 text-[11px] font-bold uppercase tracking-widest py-1.5 px-6 flex justify-between items-center z-50 relative">
+        <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></div> API Latency: 42ms</span>
+            <span class="hidden md:inline">| Auth System: Secure (JWT)</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span>NSE: <span class="text-success">OPEN</span></span>
+            <span>NASDAQ: <span class="text-rose-400">CLOSED</span></span>
+        </div>
+    </div>
+
+    <nav class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-[1400px] mx-auto px-6 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-extrabold text-sm shadow-md">S</div>
+                <span class="text-xl font-extrabold tracking-tight text-ink">StockWatcher</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-slate-500 font-bold text-xs hidden sm:block mr-4 uppercase tracking-widest">v3.0 Live</span>
+                <a href="https://safrontend.onrender.com/" target="_blank" rel="noopener noreferrer" class="bg-brand text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-violet-800 transition-all shadow-lg shadow-brand/20 active:scale-95 text-center flex items-center gap-2">
+                    Open Web App
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="pt-20 pb-16 px-6 relative">
+        <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            <div class="max-w-xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-brandLight text-brand text-xs font-bold uppercase tracking-wide mb-6 border border-violet-200">
+                    Production Environment Active
+                </div>
+                <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.1] mb-6">
+                    Professional tracking for <span class="text-brand">proactive portfolios.</span>
+                </h1>
+                <p class="text-slate-600 text-lg md:text-xl mb-8 leading-relaxed font-medium">
+                    Consolidate your investments. Our platform integrates real-time exchange data, RAG-powered AI financial assistance, and multi-channel alert systems into one seamless interface.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="https://safrontend.onrender.com/" target="_blank" rel="noopener noreferrer" class="bg-ink text-white px-8 py-4 rounded-xl font-bold text-base hover:bg-slate-800 transition-all shadow-xl flex items-center justify-center gap-2 active:scale-95">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        Start Tracking Free
+                    </a>
+                    
+                    <a href="https://github.com/DWRSH/StockAlert/releases/download/StockWatcher_v1.0/Stock.Watcher1.apk" class="bg-white text-slate-700 px-8 py-4 rounded-xl font-bold text-base hover:bg-slate-50 transition-all border border-slate-200 shadow-sm flex items-center justify-center gap-2 active:scale-95">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Download Android APK
+                    </a>
+                </div>
+                
+                <div class="flex gap-8 mt-10 pt-6 border-t border-slate-200">
+                    <div>
+                        <p class="text-3xl font-extrabold text-ink">5000+</p>
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Supported Stocks</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-extrabold text-ink">< 0.1s</p>
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Alert Latency</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative w-full h-[500px] bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 hidden lg:flex flex-col gap-4 overflow-hidden">
+                <div class="flex justify-between items-center mb-2 border-b border-slate-100 pb-4">
+                    <div class="flex gap-3 items-center">
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl">👤</div>
+                        <div>
+                            <div class="h-3 w-24 bg-slate-200 rounded mb-1.5"></div>
+                            <div class="h-2 w-16 bg-slate-100 rounded"></div>
+                        </div>
+                    </div>
+                    <div class="h-8 w-24 bg-brand rounded-lg"></div>
+                </div>
+                <div class="h-40 w-full bg-slate-50 rounded-xl border border-slate-100 relative overflow-hidden flex items-end px-4 pb-2 gap-2">
+                    <div class="w-1/6 h-[30%] bg-success/40 rounded-t-sm"></div>
+                    <div class="w-1/6 h-[50%] bg-success/60 rounded-t-sm"></div>
+                    <div class="w-1/6 h-[40%] bg-rose-400/50 rounded-t-sm"></div>
+                    <div class="w-1/6 h-[70%] bg-success rounded-t-sm"></div>
+                    <div class="w-1/6 h-[60%] bg-rose-400/80 rounded-t-sm"></div>
+                    <div class="w-1/6 h-[90%] bg-success shadow-[0_0_15px_#10b981] rounded-t-sm"></div>
+                </div>
+                <div class="flex-grow space-y-3 mt-2">
+                    <div class="h-12 w-full bg-slate-50 rounded-lg border border-slate-100 flex justify-between items-center px-4">
+                        <div class="h-3 w-20 bg-slate-200 rounded"></div>
+                        <div class="h-4 w-16 bg-success/20 rounded"></div>
+                    </div>
+                    <div class="h-12 w-full bg-slate-50 rounded-lg border border-slate-100 flex justify-between items-center px-4">
+                        <div class="h-3 w-16 bg-slate-200 rounded"></div>
+                        <div class="h-4 w-12 bg-rose-400/20 rounded"></div>
+                    </div>
+                </div>
+                <div class="absolute bottom-6 right-6 bg-ink text-white p-4 rounded-xl shadow-2xl w-64 border border-slate-700">
+                    <p class="text-xs text-brandLight font-bold mb-1">StockBot AI Insight</p>
+                    <p class="text-sm font-medium">PWL.NS is showing bullish momentum. 1-month return is +5.1%.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="w-full border-y border-slate-200 bg-white py-3 overflow-hidden shadow-sm">
+        <div class="ticker-wrapper" id="ticker-content"></div>
+    </div>
+
+    <section class="max-w-[1400px] mx-auto px-6 py-20">
+        <div class="mb-12">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-ink mb-4">Core Capabilities</h2>
+            <p class="text-slate-500 font-medium text-lg max-w-2xl">A unified infrastructure designed to eliminate the need for multiple financial apps. Everything you need is natively integrated.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[280px]">
+            <div class="bento-card md:col-span-2 p-8 relative">
+                <div class="z-10 relative">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-2xl mb-4 border border-blue-100">📈</div>
+                    <h3 class="text-2xl font-bold text-ink mb-2">Live Stock Tracking</h3>
+                    <p class="text-slate-600 font-medium text-sm w-2/3">Synchronize with the market in real-time. Track NSE, BSE, and Global indices without hitting refresh. Direct API feeds ensure zero data latency.</p>
+                </div>
+                <div class="absolute -right-6 -bottom-6 w-64 h-48 bg-slate-50 border border-slate-200 rounded-tl-2xl p-4 shadow-[-10px_-10px_30px_rgba(0,0,0,0.05)]">
+                    <div class="flex justify-between items-end border-b border-slate-200 pb-2 mb-2">
+                        <div>
+                            <p class="text-xs text-slate-500 font-bold">RELIANCE.NS</p>
+                            <p class="text-xl font-black text-ink">₹2,982.15</p>
+                        </div>
+                        <p class="text-xs font-bold text-success bg-success/10 px-1.5 py-0.5 rounded">↑ 1.2%</p>
+                    </div>
+                    <div class="h-16 w-full mt-4 flex items-end gap-1">
+                        <div class="w-full h-[40%] bg-blue-200 rounded-t-sm"></div>
+                        <div class="w-full h-[60%] bg-blue-300 rounded-t-sm"></div>
+                        <div class="w-full h-[50%] bg-blue-400 rounded-t-sm"></div>
+                        <div class="w-full h-[90%] bg-blue-600 rounded-t-sm"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bento-card md:col-span-2 p-8 bg-ink text-white relative">
+                <div class="z-10 relative">
+                    <div class="w-12 h-12 bg-brand/20 text-brandLight rounded-xl flex items-center justify-center text-2xl mb-4 border border-brand/30">🤖</div>
+                    <h3 class="text-2xl font-bold text-white mb-2">AI Financial Assistant</h3>
+                    <p class="text-slate-400 font-medium text-sm w-3/4">Our integrated StockBot uses RAG (Retrieval-Augmented Generation) to analyze live market data before responding. Ask complex queries and get zero-hallucination insights instantly.</p>
+                </div>
+                <div class="absolute right-4 bottom-4 w-[60%] space-y-2">
+                    <div class="bg-slate-800 text-xs p-3 rounded-xl rounded-tr-none ml-auto w-fit border border-slate-700">What's the trend for PWL.NS?</div>
+                    <div class="bg-brand text-xs p-3 rounded-xl rounded-tl-none mr-auto w-fit border border-brand/50 shadow-[0_0_15px_rgba(109,40,217,0.4)]">PWL.NS is actively listed at ₹1245. Technicals suggest a strong breakout...</div>
+                </div>
+            </div>
+
+            <div class="bento-card md:col-span-2 lg:row-span-2 p-8">
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl mb-4 border border-emerald-100">💼</div>
+                <h3 class="text-2xl font-bold text-ink mb-2">Portfolio Management</h3>
+                <p class="text-slate-600 font-medium text-sm mb-6">Ditch the spreadsheets. Input your holdings, average buy prices, and quantities. Our engine auto-calculates total invested value, current value, and real-time Profit & Loss (P&L) with beautiful visualizations.</p>
+                <div class="w-full rounded-xl border border-slate-200 overflow-hidden bg-slate-50 mt-auto">
+                    <div class="grid grid-cols-4 gap-2 p-3 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">
+                        <div>Asset</div> <div>Avg Cost</div> <div>LTP</div> <div>P&L</div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 p-3 border-b border-slate-100 text-sm font-bold items-center bg-white">
+                        <div>TCS.NS</div> <div class="text-slate-500 font-medium">₹3,900</div> <div>₹4,120</div> <div class="text-success">+5.6%</div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 p-3 border-b border-slate-100 text-sm font-bold items-center bg-white">
+                        <div>AAPL</div> <div class="text-slate-500 font-medium">$170.5</div> <div>$189.4</div> <div class="text-success">+11.0%</div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 p-3 text-sm font-bold items-center bg-white">
+                        <div>TSLA</div> <div class="text-slate-500 font-medium">$180.0</div> <div>$175.2</div> <div class="text-rose-500">-2.6%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bento-card p-8">
+                <div class="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center text-xl mb-4">🔔</div>
+                <h3 class="text-lg font-bold text-ink mb-2">Omnichannel Alerts</h3>
+                <p class="text-slate-600 font-medium text-xs mb-4">Set exact price targets. Receive zero-lag notifications directly to your <b>Email</b> and <b>Telegram</b> when a stock hits your levels.</p>
+                <div class="flex gap-2 mt-auto">
+                    <span class="bg-[#0088cc]/10 text-[#0088cc] px-2 py-1 rounded text-[10px] font-bold border border-[#0088cc]/20">Telegram Auth ✓</span>
+                </div>
+            </div>
+
+            <div class="bento-card p-8 bg-slate-50 justify-center items-center text-center">
+                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl mb-4 shadow-sm border border-slate-200">🛡️</div>
+                <h3 class="text-lg font-bold text-ink mb-2">Secure Auth System</h3>
+                <p class="text-slate-500 font-medium text-xs">Military-grade JWT authentication and encrypted session management keep your portfolio data strictly private.</p>
+            </div>
+
+            <div class="bento-card p-8">
+                <div class="w-10 h-10 bg-rose-50 text-rose-600 rounded-lg flex items-center justify-center text-xl mb-4">📰</div>
+                <h3 class="text-lg font-bold text-ink mb-2">News Integration</h3>
+                <p class="text-slate-600 font-medium text-xs">Aggregated real-time financial news, corporate earnings, and global market updates curated specifically for the assets in your watchlist.</p>
+            </div>
+
+            <div class="bento-card p-8 relative overflow-hidden">
+                <div class="w-10 h-10 bg-yellow-50 text-yellow-600 rounded-lg flex items-center justify-center text-xl mb-4 relative z-10">🌍</div>
+                <h3 class="text-lg font-bold text-ink mb-2 relative z-10">Multi-Market</h3>
+                <p class="text-slate-600 font-medium text-xs relative z-10">Support for both Indian Equities (₹) and US Stocks ($). Currency context is handled automatically by the system.</p>
+                <div class="absolute -bottom-4 -right-4 text-8xl opacity-5">₹ $</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="max-w-[1400px] mx-auto px-6 mb-24">
+        <div class="bg-white border border-slate-200 rounded-3xl p-8 md:p-12 shadow-sm flex flex-col md:flex-row items-center gap-12">
+            <div class="flex-1">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-widest mb-4">
+                    Infrastructure
+                </div>
+                <h2 class="text-3xl font-extrabold text-ink mb-4">Production-Ready Backend.</h2>
+                <p class="text-slate-600 font-medium leading-relaxed mb-6">
+                    Our platform is powered by a highly-scalable backend architecture engineered to process thousands of concurrent API requests, manage encrypted user data, and dispatch background alert jobs without dropping a single frame.
+                </p>
+                <div class="flex gap-6">
+                    <div>
+                        <p class="text-2xl font-black text-ink">99.9%</p>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Uptime</p>
+                    </div>
+                    <div class="w-px h-10 bg-slate-200"></div>
+                    <div>
+                        <p class="text-2xl font-black text-ink">Zero</p>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Data Loss</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1 w-full bg-slate-50 rounded-2xl p-6 border border-slate-200 font-mono text-xs text-slate-600">
+                <p class="text-brand font-bold mb-2">// System Diagnostics</p>
+                <p>> Initializing Auth Middleware... <span class="text-success">OK</span></p>
+                <p>> Establishing Live Data Sockets... <span class="text-success">CONNECTED</span></p>
+                <p>> Loading AI RAG Context... <span class="text-success">READY</span></p>
+                <p>> Background Alert Workers... <span class="text-success">RUNNING (4 Nodes)</span></p>
+                <p class="mt-4 text-ink font-bold">> System Status: Optimal Operations.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-white border-t border-slate-200 pt-16 pb-8">
+        <div class="max-w-[1400px] mx-auto px-6 text-center flex flex-col items-center">
+            <p class="text-slate-400 text-xs font-bold tracking-widest uppercase mb-2">
+                &copy; 2026 StockWatcher Platform. All rights reserved.
+            </p>
+            <p class="text-slate-400 text-[10px] max-w-xl leading-relaxed">
+                Data provided by financial exchanges and may be delayed. StockWatcher does not provide personalized financial advice. Verify all information before executing trades.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        const stocks = [
+            { s: "NIFTY 50", p: "22,453.20", c: "+0.45%", up: true },
+            { s: "SENSEX", p: "73,982.15", c: "+0.38%", up: true },
+            { s: "RELIANCE.NS", p: "2,982.15", c: "+1.20%", up: true },
+            { s: "PWL.NS", p: "1,245.50", c: "+5.10%", up: true },
+            { s: "TCS.NS", p: "4,120.00", c: "-0.38%", up: false },
+            { s: "AAPL", p: "189.43", c: "+0.40%", up: true },
+            { s: "NVDA", p: "892.15", c: "+2.30%", up: true },
+            { s: "TSLA", p: "175.20", c: "-2.50%", up: false }
+        ];
+
+        function populateTicker() {
+            const container = document.getElementById('ticker-content');
+            const htmlString = stocks.map(st => `
+                <div class="flex items-center gap-3 px-8 border-r border-slate-200 flex-shrink-0">
+                    <span class="text-slate-500 text-xs font-extrabold uppercase tracking-widest">${st.s}</span>
+                    <span class="text-ink text-lg font-black font-mono tracking-tighter">${st.p}</span>
+                    <span class="${st.up ? 'text-success' : 'text-rose-500'} text-xs font-bold">
+                        ${st.up ? '↑' : '↓'} ${st.c}
+                    </span>
+                </div>
+            `).join('');
+            container.innerHTML = htmlString + htmlString;
+        }
+        document.addEventListener('DOMContentLoaded', populateTicker);
+    </script>
+</body>
+</html>
