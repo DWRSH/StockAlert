@@ -21,7 +21,6 @@ class AIService:
             # --- SMART MODEL SELECTOR LOGIC ---
             logger.info("🤖 AI: Searching for available models...")
             available_models = []
-            
             try:
                 for m in genai.list_models():
                     if 'generateContent' in m.supported_generation_methods:
@@ -37,12 +36,7 @@ class AIService:
                 "models/gemini-1.0-pro"
             ]
 
-            selected_model = None
-            for target in priority_list:
-                if target in available_models:
-                    selected_model = target
-                    break
-            
+            selected_model = next((t for t in priority_list if t in available_models), None)
             if not selected_model:
                 selected_model = available_models[0] if available_models else "models/gemini-pro"
 
@@ -53,7 +47,6 @@ class AIService:
         except Exception as e:
             logger.error(f"❌ AI Config Error: {e}")
 
-    # ✅ UDPATED: Added 'currency' parameter & DEBUGGING LOGIC
     def analyze(self, symbol, price, change, source, currency="INR"):
         if not self.model:
             self.configure()
@@ -61,15 +54,12 @@ class AIService:
                 return "AI Unavailable: Check API Key or Server Logs."
 
         try:
-            # --- DYNAMIC CONTEXT SETTING ---
-            if currency == "USD":
-                market_context = "US Stock Market (NASDAQ/NYSE)"
-                currency_symbol = "$"
-            else:
-                market_context = "Indian Stock Market (NSE/BSE)"
-                currency_symbol = "₹"
+            # DYNAMIC CONTEXT SETTING
+            is_us = currency == "USD"
+            market_context = "US Stock Market (NASDAQ/NYSE)" if is_us else "Indian Stock Market (NSE/BSE)"
+            currency_symbol = "$" if is_us else "₹"
 
-            # --- IMPROVED PROFESSIONAL PROMPT WITH DEBUGGING RULE ---
+            # 🛠️ IMPROVED PROMPT
             prompt = f"""
             You are a Senior Financial Analyst for the {market_context}.
             Analyze the following stock data based on technical price action and your knowledge of the company's fundamentals.
@@ -90,17 +80,15 @@ class AIService:
             
             📈 **Trend:** [Bullish / Bearish / Sideways / Volatile]
             
-            💡 **Analysis:** [Explicitly state the 1-month return here first. Then provide 2-3 sentences explaining WHY. Mention if the stock is overbought, oversold, or reacting to sector news.]
+            💡 **Analysis:** [Explicitly state the 1-month return here first. Then provide 2-3 sentences explaining WHY.]
             
             🎯 **Strategy:** [Accumulate on Dips / Hold for Long Term / Book Profits / Avoid]
             
-            ⚠️ **Risk Factor:** [Low / Medium / High] - [One short reason, e.g., "High Valuation" or "Market Volatility"]
+            ⚠️ **Risk Factor:** [Low / Medium / High] - [One short reason]
             """
             
-            # 🚀 === DEBUGGING TRACKERS === 🚀
-            # Yeh line backend terminal mein print hogi API call se theek pehle
-            logger.info(f"🔍 DEBUG AI INPUT -> Symbol: {symbol} | Price: {price} | 1-Month Return: '{change}'")
-            print(f"🔍 DEBUG AI INPUT -> Symbol: {symbol} | Price: {price} | 1-Month Return: '{change}'") # Backup print just in case logger is muted
+            # 🚀 DEBUGGING TRACKERS
+            logger.info(f"🔍 DEBUG AI INPUT -> Symbol: {symbol} | Price: {price} | 1-Mo Return: '{change}'")
             
             response = self.model.generate_content(prompt)
             return response.text.strip()
