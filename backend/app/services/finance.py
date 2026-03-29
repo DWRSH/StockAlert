@@ -10,21 +10,37 @@ import logging
 
 logger = logging.getLogger("StockWatcher")
 
-# --- 1. USD to INR Rate Fetcher ---
+# 🛡️ THE SHIELD: Custom Session to Bypass Yahoo's Cloud Blocker on Render
+yf_session = requests.Session()
+yf_session.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5"
+})
+
 @alru_cache(maxsize=1, ttl=3600)
 async def get_usd_to_inr_rate():
     try:
-        ticker = yf.Ticker("USDINR=X")
+        ticker = yf.Ticker("USDINR=X", session=yf_session)
         rate = ticker.fast_info.last_price
         return float(rate)
     except Exception as e:
         logger.error(f"Failed to fetch USD rate: {e}")
         return 84.0 
 
-# ✅ BULLETPROOF 1-MONTH RETURN CALCULATOR
-def calculate_1mo_return(ticker: yf.Ticker) -> str:
+# ✅ BULLETPROOF & STEALTH 1-MONTH RETURN CALCULATOR
+def calculate_1mo_return(symbol: str) -> str:
     try:
+        # Pass the stealth session here!
+        ticker = yf.Ticker(symbol, session=yf_session)
         hist_1mo = ticker.history(period='1mo')
+        
+        # Fallback for BSE stocks if data is empty
+        if hist_1mo.empty and symbol.endswith('.BO'):
+            fallback_symbol = symbol.replace('.BO', '.NS')
+            ticker = yf.Ticker(fallback_symbol, session=yf_session)
+            hist_1mo = ticker.history(period='1mo')
+
         if len(hist_1mo) >= 2:
             start_price = hist_1mo['Close'].iloc[0]
             end_price = hist_1mo['Close'].iloc[-1]
@@ -32,27 +48,31 @@ def calculate_1mo_return(ticker: yf.Ticker) -> str:
             # Formula: ((New - Old) / Old) * 100
             change_percent = ((end_price - start_price) / start_price) * 100
             return f"{change_percent:+.2f}%"
+        else:
+            # Agar abhi bhi fail ho, toh specific error dega taaki humein pata chale
+            return "N/A (Blocked or No Data)"
+            
     except Exception as e:
-        logger.warning(f"1-Month history failed: {e}")
-    return "N/A"
+        logger.warning(f"1-Month history failed for {symbol}: {e}")
+        return f"N/A (Error: {str(e)[:15]})"
 
 # --- 2. Get Stock Details (Used for Portfolio & AI) ---
 async def get_stock_details(symbol: str):
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=yf_session)
         try:
-            # 1. Try Direct Symbol (For US Stocks like AAPL)
+            # Try Direct Symbol
             price = ticker.fast_info.last_price
             currency = ticker.fast_info.currency 
-            change_1mo = calculate_1mo_return(ticker)
+            change_1mo = calculate_1mo_return(symbol)
         except:
-            # 2. Try Appending .NS (For Indian Stocks like RELIANCE)
+            # Try Appending .NS
             if not symbol.endswith((".NS", ".BO")):
                 symbol = f"{symbol}.NS"
-                ticker = yf.Ticker(symbol)
+                ticker = yf.Ticker(symbol, session=yf_session)
                 price = ticker.fast_info.last_price
                 currency = ticker.fast_info.currency
-                change_1mo = calculate_1mo_return(ticker)
+                change_1mo = calculate_1mo_return(symbol)
             else:
                 return None
 
@@ -60,24 +80,24 @@ async def get_stock_details(symbol: str):
             "symbol": symbol,
             "price": round(float(price), 2),
             "currency": currency,
-            "change_1mo": change_1mo,  # Perfectly calculated percentage!
+            "change_1mo": change_1mo,  
             "is_us": currency == 'USD'
         }
     except Exception as e:
         logger.warning(f"Detail fetch failed for {symbol}: {e}")
         return None
 
-# --- 3. Fast Yahoo Price (For Quick Alerts) ---
+# --- 3. Fast Yahoo Price ---
 @alru_cache(maxsize=100, ttl=60) 
 async def get_yahoo_price(symbol: str):
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=yf_session)
         try:
             return round(float(ticker.fast_info.last_price), 2)
         except:
             pass
         if not symbol.endswith((".NS", ".BO")):
-            ticker = yf.Ticker(f"{symbol}.NS")
+            ticker = yf.Ticker(f"{symbol}.NS", session=yf_session)
             return round(float(ticker.fast_info.last_price), 2)
     except:
         pass
@@ -88,7 +108,7 @@ async def scrape_google_finance(symbol: str):
     try:
         clean_sym = symbol.replace(".NS", "").replace(".BO", "")
         url = f"https://www.google.com/finance/quote/{clean_sym}:NSE"
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         response = requests.get(url, headers=headers, timeout=3)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, "html.parser")
