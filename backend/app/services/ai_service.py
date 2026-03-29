@@ -53,7 +53,7 @@ class AIService:
         except Exception as e:
             logger.error(f"❌ AI Config Error: {e}")
 
-    # ✅ UDPATED: Added 'currency' parameter
+    # ✅ UDPATED: Added 'currency' parameter & DEBUGGING LOGIC
     def analyze(self, symbol, price, change, source, currency="INR"):
         if not self.model:
             self.configure()
@@ -69,7 +69,7 @@ class AIService:
                 market_context = "Indian Stock Market (NSE/BSE)"
                 currency_symbol = "₹"
 
-            # --- IMPROVED PROFESSIONAL PROMPT ---
+            # --- IMPROVED PROFESSIONAL PROMPT WITH DEBUGGING RULE ---
             prompt = f"""
             You are a Senior Financial Analyst for the {market_context}.
             Analyze the following stock data based on technical price action and your knowledge of the company's fundamentals.
@@ -84,17 +84,23 @@ class AIService:
             1. Consider the 1-month return to determine short-term momentum.
             2. Combine this with your internal knowledge about the company's sector.
             3. Keep the tone professional, concise, and actionable.
+            4. STRICT RULE: Start your 'Analysis' section by explicitly stating the exact 1-month return value you received in the data above.
 
             📋 **Response Format (Strictly follow this structure):**
             
             📈 **Trend:** [Bullish / Bearish / Sideways / Volatile]
             
-            💡 **Analysis:** [Provide 2-3 sentences explaining WHY. Mention if the stock is overbought, oversold, or reacting to sector news.]
+            💡 **Analysis:** [Explicitly state the 1-month return here first. Then provide 2-3 sentences explaining WHY. Mention if the stock is overbought, oversold, or reacting to sector news.]
             
             🎯 **Strategy:** [Accumulate on Dips / Hold for Long Term / Book Profits / Avoid]
             
             ⚠️ **Risk Factor:** [Low / Medium / High] - [One short reason, e.g., "High Valuation" or "Market Volatility"]
             """
+            
+            # 🚀 === DEBUGGING TRACKERS === 🚀
+            # Yeh line backend terminal mein print hogi API call se theek pehle
+            logger.info(f"🔍 DEBUG AI INPUT -> Symbol: {symbol} | Price: {price} | 1-Month Return: '{change}'")
+            print(f"🔍 DEBUG AI INPUT -> Symbol: {symbol} | Price: {price} | 1-Month Return: '{change}'") # Backup print just in case logger is muted
             
             response = self.model.generate_content(prompt)
             return response.text.strip()
