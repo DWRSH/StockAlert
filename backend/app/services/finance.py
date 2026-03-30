@@ -10,19 +10,24 @@ import logging
 
 logger = logging.getLogger("StockWatcher")
 
-# 🛡️ STEALTH SESSION (Cloud Blocker bypass)
+# 🛡️ STEALTH SESSION (Cloud Blocker bypass for Render)
 yf_session = requests.Session()
 yf_session.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5"
 })
 
+# --- 1. USD to INR Rate Fetcher ---
 @alru_cache(maxsize=1, ttl=3600)
 async def get_usd_to_inr_rate():
     try:
         ticker = yf.Ticker("USDINR=X", session=yf_session)
         rate = ticker.fast_info.last_price
         return float(rate)
-    except: return 84.0 
+    except Exception as e:
+        logger.error(f"Failed to fetch USD rate: {e}")
+        return 84.0 
 
 # ✅ NEW: Fetch Array of Last 30 Days Closing Prices
 def get_30_days_prices(symbol: str) -> list:
@@ -47,54 +52,90 @@ def get_30_days_prices(symbol: str) -> list:
         logger.warning(f"30-Days history failed for {symbol}: {e}")
         return []
 
-# --- 2. Get Stock Details ---
+# --- 2. GET STOCK DETAILS (The Stubborn Version for AI) ---
 async def get_stock_details(symbol: str):
     try:
-        ticker = yf.Ticker(symbol, session=yf_session)
-        try:
-            price = ticker.fast_info.last_price
-            currency = ticker.fast_info.currency 
-            price_history = get_30_days_prices(symbol) # 👈 Calling new function
-        except:
-            if not symbol.endswith((".NS", ".BO")):
-                symbol = f"{symbol}.NS"
-                ticker = yf.Ticker(symbol, session=yf_session)
-                price = ticker.fast_info.last_price
-                currency = ticker.fast_info.currency
-                price_history = get_30_days_prices(symbol) # 👈 Calling new function
-            else:
-                return None
+        # Clean the symbol
+        symbol = symbol.upper().strip()
+        
+        # Smart Suffix Logic (Try direct first, then try .NS)
+        tickers_to_try = [symbol]
+        if not symbol.endswith((".NS", ".BO")):
+            tickers_to_try.append(f"{symbol}.NS")
 
-        return {
-            "symbol": symbol,
-            "price": round(float(price), 2),
-            "currency": currency,
-            "price_history": price_history,  # 👈 Array of prices goes here
-            "is_us": currency == 'USD'
-        }
+        for sym in tickers_to_try:
+            try:
+                logger.info(f"🔍 AI FETCH: Trying to get data for '{sym}'...")
+                ticker = yf.Ticker(sym, session=yf_session)
+                
+                # 🛡️ FIX: Using history() instead of fast_info because it's 10x more reliable on Render
+                hist = ticker.history(period="1d")
+                
+                if hist.empty:
+                    logger.warning(f"⚠️ AI FETCH: No recent trading data for '{sym}'.")
+                    continue # Try the next symbol in the list
+                    
+                price = round(float(hist['Close'].iloc[-1]), 2)
+                
+                # Safe Currency Detection
+                currency = "INR" if sym.endswith((".NS", ".BO")) else "USD"
+                try:
+                    currency = ticker.fast_info.currency
+                except:
+                    pass # Keep the default INR/USD fallback
+                    
+                # Get the 30-day array
+                price_history = get_30_days_prices(sym)
+                
+                logger.info(f"✅ AI FETCH SUCCESS: '{sym}' | Price: {price} | History Data points: {len(price_history)}")
+                
+                return {
+                    "symbol": sym,
+                    "price": price,
+                    "currency": currency,
+                    "price_history": price_history,
+                    "is_us": currency == 'USD'
+                }
+            except Exception as e:
+                logger.warning(f"⚠️ AI FETCH ERROR for '{sym}': {e}")
+                continue # Try next symbol
+                
+        # Agar dono try fail ho gaye tab ye line chalegi
+        logger.error(f"❌ AI FETCH COMPLETELY FAILED for '{symbol}'")
+        return None
+        
     except Exception as e:
-        logger.warning(f"Detail fetch failed for {symbol}: {e}")
+        logger.error(f"Fatal error in get_stock_details: {e}")
         return None
 
-# --- Fast Yahoo Price (For Alerts) ---
+# --- 3. Fast Yahoo Price (For Quick Alerts) ---
 @alru_cache(maxsize=100, ttl=60) 
 async def get_yahoo_price(symbol: str):
     try:
         ticker = yf.Ticker(symbol, session=yf_session)
-        try: return round(float(ticker.fast_info.last_price), 2)
-        except: pass
+        try: 
+            # Using history here as well to avoid fast_info cloud blocks
+            hist = ticker.history(period="1d")
+            if not hist.empty:
+                return round(float(hist['Close'].iloc[-1]), 2)
+        except: 
+            pass
+            
         if not symbol.endswith((".NS", ".BO")):
             ticker = yf.Ticker(f"{symbol}.NS", session=yf_session)
-            return round(float(ticker.fast_info.last_price), 2)
-    except: pass
+            hist = ticker.history(period="1d")
+            if not hist.empty:
+                return round(float(hist['Close'].iloc[-1]), 2)
+    except: 
+        pass
     return None
 
-# --- Backup Google Finance ---
+# --- 4. Backup Google Finance ---
 async def scrape_google_finance(symbol: str):
     try:
         clean_sym = symbol.replace(".NS", "").replace(".BO", "")
         url = f"https://www.google.com/finance/quote/{clean_sym}:NSE"
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         response = requests.get(url, headers=headers, timeout=3)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, "html.parser")
@@ -103,6 +144,7 @@ async def scrape_google_finance(symbol: str):
     except: pass
     return None
 
+# --- MAIN LIVE PRICE FUNCTION ---
 async def get_live_price(symbol: str):
     price = await get_yahoo_price(symbol)
     if price: return price
