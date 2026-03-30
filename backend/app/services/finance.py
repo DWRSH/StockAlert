@@ -1,161 +1,128 @@
 import requests
 import yfinance as yf
+import pandas as pd
 import feedparser
 import urllib.parse
 import time
 from datetime import datetime
 from bs4 import BeautifulSoup
 from async_lru import alru_cache 
-import logging
 
+import logging
 logger = logging.getLogger("StockWatcher")
 
-# 🛡️ STEALTH SESSION (Cloud Blocker bypass for Render)
-yf_session = requests.Session()
-yf_session.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5"
-})
-
-# --- 1. USD to INR Rate Fetcher ---
-@alru_cache(maxsize=1, ttl=3600)
+# --- 1. USD to INR Rate Fetcher (New) ---
+@alru_cache(maxsize=1, ttl=3600) # 1 Hour Cache
 async def get_usd_to_inr_rate():
     try:
-        ticker = yf.Ticker("USDINR=X", session=yf_session)
+        # Yahoo Finance symbol for USD/INR is 'USDINR=X'
+        ticker = yf.Ticker("USDINR=X")
         rate = ticker.fast_info.last_price
         return float(rate)
     except Exception as e:
         logger.error(f"Failed to fetch USD rate: {e}")
-        return 84.0 
+        return 84.0 # Fallback rate if API fails
 
-# ✅ NEW: Fetch Array of Last 30 Days Closing Prices
-def get_30_days_prices(symbol: str) -> list:
-    try:
-        ticker = yf.Ticker(symbol, session=yf_session)
-        hist_1mo = ticker.history(period='1mo')
-        
-        # BSE (.BO) Fallback to NSE (.NS)
-        if hist_1mo.empty and symbol.endswith('.BO'):
-            fallback_symbol = symbol.replace('.BO', '.NS')
-            ticker = yf.Ticker(fallback_symbol, session=yf_session)
-            hist_1mo = ticker.history(period='1mo')
-
-        if not hist_1mo.empty:
-            # Extract 'Close' prices, round to 2 decimals, convert to list
-            prices_list = [round(float(price), 2) for price in hist_1mo['Close'].tolist()]
-            return prices_list
-        else:
-            return [] # Empty list if no data
-            
-    except Exception as e:
-        logger.warning(f"30-Days history failed for {symbol}: {e}")
-        return []
-
-# --- 2. GET STOCK DETAILS (The Stubborn Version for AI) ---
+# --- 2. Get Stock Details (Price + Currency) ---
+# Ye function Portfolio page ke liye zaroori hai
 async def get_stock_details(symbol: str):
     try:
-        # Clean the symbol
-        symbol = symbol.upper().strip()
+        # Logic: Agar suffix (.NS) nahi hai, toh pehle direct try karein (US Stocks ke liye)
+        # Agar fail ho, aur suffix bhi nahi hai, tab .NS lagayein
         
-        # Smart Suffix Logic (Try direct first, then try .NS)
-        tickers_to_try = [symbol]
-        if not symbol.endswith((".NS", ".BO")):
-            tickers_to_try.append(f"{symbol}.NS")
+        ticker = yf.Ticker(symbol)
+        info = ticker.fast_info
+        
+        try:
+            price = info.last_price
+            currency = info.currency # USD or INR
+        except:
+            # Agar direct symbol fail hua (e.g. RELIANCE without .NS)
+            if not symbol.endswith((".NS", ".BO")):
+                symbol = f"{symbol}.NS"
+                ticker = yf.Ticker(symbol)
+                info = ticker.fast_info
+                price = info.last_price
+                currency = info.currency
+            else:
+                return None
 
-        for sym in tickers_to_try:
-            try:
-                logger.info(f"🔍 AI FETCH: Trying to get data for '{sym}'...")
-                ticker = yf.Ticker(sym, session=yf_session)
-                
-                # 🛡️ FIX: Using history() instead of fast_info because it's 10x more reliable on Render
-                hist = ticker.history(period="1d")
-                
-                if hist.empty:
-                    logger.warning(f"⚠️ AI FETCH: No recent trading data for '{sym}'.")
-                    continue # Try the next symbol in the list
-                    
-                price = round(float(hist['Close'].iloc[-1]), 2)
-                
-                # Safe Currency Detection
-                currency = "INR" if sym.endswith((".NS", ".BO")) else "USD"
-                try:
-                    currency = ticker.fast_info.currency
-                except:
-                    pass # Keep the default INR/USD fallback
-                    
-                # Get the 30-day array
-                price_history = get_30_days_prices(sym)
-                
-                logger.info(f"✅ AI FETCH SUCCESS: '{sym}' | Price: {price} | History Data points: {len(price_history)}")
-                
-                return {
-                    "symbol": sym,
-                    "price": price,
-                    "currency": currency,
-                    "price_history": price_history,
-                    "is_us": currency == 'USD'
-                }
-            except Exception as e:
-                logger.warning(f"⚠️ AI FETCH ERROR for '{sym}': {e}")
-                continue # Try next symbol
-                
-        # Agar dono try fail ho gaye tab ye line chalegi
-        logger.error(f"❌ AI FETCH COMPLETELY FAILED for '{symbol}'")
-        return None
-        
+        return {
+            "symbol": symbol,
+            "price": price,
+            "currency": currency,
+            "is_us": currency == 'USD'
+        }
     except Exception as e:
-        logger.error(f"Fatal error in get_stock_details: {e}")
+        logger.warning(f"Detail fetch failed for {symbol}: {e}")
         return None
 
-# --- 3. Fast Yahoo Price (For Quick Alerts) ---
+# --- 3. YAHOO FINANCE PRICE (Optimized) ---
 @alru_cache(maxsize=100, ttl=60) 
 async def get_yahoo_price(symbol: str):
     try:
-        ticker = yf.Ticker(symbol, session=yf_session)
-        try: 
-            # Using history here as well to avoid fast_info cloud blocks
-            hist = ticker.history(period="1d")
-            if not hist.empty:
-                return round(float(hist['Close'].iloc[-1]), 2)
-        except: 
+        ticker = yf.Ticker(symbol)
+        
+        # 1. Try Direct Symbol (For US Stocks like AAPL)
+        try:
+            price = ticker.fast_info.last_price
+            return round(float(price), 2)
+        except:
             pass
             
+        # 2. If Failed & No Suffix, Try appending .NS (For Indian Stocks)
         if not symbol.endswith((".NS", ".BO")):
-            ticker = yf.Ticker(f"{symbol}.NS", session=yf_session)
-            hist = ticker.history(period="1d")
-            if not hist.empty:
-                return round(float(hist['Close'].iloc[-1]), 2)
-    except: 
+            ticker = yf.Ticker(f"{symbol}.NS")
+            price = ticker.fast_info.last_price
+            return round(float(price), 2)
+            
+    except Exception as e:
+        # logger.warning(f"Yahoo failed for {symbol}: {e}")
         pass
     return None
 
-# --- 4. Backup Google Finance ---
+# --- 4. GOOGLE FINANCE (Backup - Indian Only) ---
+# Google Finance URL structure differs for US/India, so we keep this mostly for INR fallback
 async def scrape_google_finance(symbol: str):
     try:
+        # US stocks usually don't need this backup, assume Indian context if fallback needed
         clean_sym = symbol.replace(".NS", "").replace(".BO", "")
         url = f"https://www.google.com/finance/quote/{clean_sym}:NSE"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(url, headers=headers, timeout=3)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, "html.parser")
             price_div = soup.find("div", {"class": "YMlKec fxKbKc"})
-            if price_div: return float(price_div.text.replace("₹", "").replace("$", "").replace(",", "").strip())
+            if price_div:
+                return float(price_div.text.replace("₹", "").replace("$", "").replace(",", "").strip())
     except: pass
     return None
 
-# --- MAIN LIVE PRICE FUNCTION ---
+# --- MAIN FUNCTION ---
 async def get_live_price(symbol: str):
+    # Step 1: Try Yahoo (Handles both US & India)
     price = await get_yahoo_price(symbol)
     if price: return price
+
+    # Step 2: Try Google (Backup for Indian stocks)
     return await scrape_google_finance(symbol)
 
-# --- News ---
+# --- NEWS ---
 @alru_cache(maxsize=10, ttl=600) 
 async def get_google_news(query: str):
     try:
+        # Search query ko generic banaya taaki US news bhi aaye
         encoded_query = urllib.parse.quote(f"{query} stock news")
         rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-IN&gl=IN&ceid=IN:en"
         feed = feedparser.parse(rss_url)
-        return [{"title": e.title, "link": e.link, "publisher": e.source.title if 'source' in e else "Google News", "time": datetime.fromtimestamp(time.mktime(e.published_parsed)).strftime('%d %b, %H:%M') if e.get('published_parsed') else "Recent", "img": None} for e in feed.entries[:8]]
+        news_items = []
+        for entry in feed.entries[:8]:
+            news_items.append({
+                "title": entry.title,
+                "link": entry.link,
+                "publisher": entry.source.title if 'source' in entry else "Google News",
+                "time": datetime.fromtimestamp(time.mktime(entry.published_parsed)).strftime('%d %b, %H:%M') if entry.get('published_parsed') else "Recent",
+                "img": None 
+            })
+        return news_items
     except: return []
